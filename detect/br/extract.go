@@ -1,0 +1,260 @@
+package br
+
+import (
+	"regexp"
+	"strings"
+)
+
+// Kind names a category of Brazilian sensitive data.
+type Kind string
+
+// The kinds this package can extract.
+const (
+	KindCPF    Kind = "cpf"
+	KindCNPJ   Kind = "cnpj"
+	KindCNH    Kind = "cnh"
+	KindPIS    Kind = "pis"
+	KindTitulo Kind = "titulo-eleitor"
+	KindCNS    Kind = "cns"
+	KindPAN    Kind = "card-pan"
+	KindPixKey Kind = "pix-key"
+	KindE2EID  Kind = "pix-e2eid"
+)
+
+// Match is one candidate found in text, before validation.
+type Match struct {
+	Kind  Kind
+	Value string
+	Start int // byte offset of the first character
+	End   int // byte offset just past the last
+}
+
+// The patterns below share two rules.
+//
+// First, every pattern is anchored by a negative lookaround substitute: Go's
+// RE2 has no lookaround, so boundaries are enforced by matching the
+// surrounding byte and discarding it in a post-check rather than in the
+// regex. Without that, an eleven-digit run inside a SHA-256 hash matches as
+// a CPF, and hashes are everywhere in a codebase.
+//
+// Second, patterns accept the masks a document actually circulates in, not
+// only the canonical one.
+var patterns = []struct {
+	kind Kind
+	re   *regexp.Regexp
+}{
+	{KindE2EID, regexp.MustCompile(`[Ee][0-9]{8}[0-9]{12}[0-9A-Za-z]{11}`)},
+	{KindCNPJ, regexp.MustCompile(`[0-9A-Za-z]{2}\.?[0-9A-Za-z]{3}\.?[0-9A-Za-z]{3}/?[0-9A-Za-z]{4}-?[0-9]{2}`)},
+	{KindCNS, regexp.MustCompile(`[1-2789][0-9]{2}[\s.]?[0-9]{4}[\s.]?[0-9]{4}[\s.]?[0-9]{4}`)},
+	{KindTitulo, regexp.MustCompile(`[0-9]{4}[\s.]?[0-9]{4}[\s.]?[0-9]{4}`)},
+	{KindPAN, regexp.MustCompile(`[0-9]{4}[\s.-]?[0-9]{4}[\s.-]?[0-9]{4}[\s.-]?[0-9]{1,7}`)},
+	{KindCPF, regexp.MustCompile(`[0-9]{3}\.?[0-9]{3}\.?[0-9]{3}[-.]?[0-9]{2}`)},
+	{KindPIS, regexp.MustCompile(`[0-9]{3}\.?[0-9]{5}\.?[0-9]{2}-?[0-9]`)},
+	{KindCNH, regexp.MustCompile(`[0-9]{11}`)},
+}
+
+// isBoundary reports whether b can sit next to a document without the match
+// being part of a longer token. A digit or letter next door means the run is
+// a fragment of something else — a hash, an id, a longer number.
+func isBoundary(b byte) bool {
+	switch {
+	case b >= '0' && b <= '9', b >= 'a' && b <= 'z', b >= 'A' && b <= 'Z':
+		return false
+	case b == '_':
+		return false
+	default:
+		return true
+	}
+}
+
+func hasBoundaries(s string, start, end int) bool {
+	if start > 0 && !isBoundary(s[start-1]) {
+		return false
+	}
+	if end < len(s) && !isBoundary(s[end]) {
+		return false
+	}
+	return true
+}
+
+// Extract returns every candidate in s that passes both the pattern and its
+// validator. A candidate whose check digit fails is dropped here and never
+// becomes a Finding, which is what makes "zero false positives on
+// structurally invalid values" true rather than aspirational.
+//
+// Overlapping matches are resolved by keeping the first accepted one, with
+// kinds tried in order of specificity.
+const (
+	// minDigits is the fewest digits a numeric document can have.
+	minDigits = 11
+
+	// An alphanumeric CNPJ may carry as few as two digits, because only its
+	// check digits must be numeric — the other twelve positions can all be
+	// letters. It therefore needs its own, looser gate.
+	minCNPJDigits = 2
+	minCNPJAlnum  = 14
+)
+
+// countChars is a single allocation-free pass returning how many digits and
+// how many alphanumerics a string holds. It is the prefilter that lets most
+// lines of a codebase skip the regex engine entirely.
+func countChars(s string) (digits, alnum int) {
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		switch {
+		case c >= '0' && c <= '9':
+			digits++
+			alnum++
+		case c >= 'a' && c <= 'z', c >= 'A' && c <= 'Z':
+			alnum++
+		}
+	}
+	return digits, alnum
+}
+
+// worthScanning reports whether a line can hold a document at all, and
+// whether only the CNPJ pattern needs to run.
+func worthScanning(s string) (scan, cnpjOnly bool) {
+	d, a := countChars(s)
+	switch {
+	case d >= minDigits:
+		return true, false
+	case d >= minCNPJDigits && a >= minCNPJAlnum:
+		return true, true
+	default:
+		return false, false
+	}
+}
+
+// Extract returns every candidate in s that passes both the pattern and its
+// validator. A candidate whose check digit fails is dropped here and never
+// becomes a Finding, which is what makes "zero false positives on
+// structurally invalid values" true rather than aspirational.
+//
+// Overlapping matches are resolved by keeping the first accepted one, with
+// kinds tried in order of specificity.
+//
+// Text is processed line by line behind a digit-count prefilter. Running the
+// seven patterns over every byte costs seven full scans; most lines of a
+// codebase hold no document at all, and skipping them is worth more than any
+// optimisation inside the patterns.
+func Extract(s string) []Match {
+	if scan, _ := worthScanning(s); !scan {
+		return nil
+	}
+
+	var out []Match
+	offset := 0
+	for offset <= len(s) {
+		end := strings.IndexByte(s[offset:], '\n')
+		var line string
+		if end < 0 {
+			line, end = s[offset:], len(s)-offset
+		} else {
+			line = s[offset : offset+end]
+		}
+
+		if scan, cnpjOnly := worthScanning(line); scan {
+			for _, m := range extractLine(line, cnpjOnly) {
+				m.Start += offset
+				m.End += offset
+				out = append(out, m)
+			}
+		}
+		offset += end + 1
+	}
+	return out
+}
+
+// extractLine runs the patterns over a single line already known to hold
+// enough digits to be worth the cost.
+func extractLine(s string, cnpjOnly bool) []Match {
+	var out []Match
+	var taken []bool
+
+	for _, p := range patterns {
+		if cnpjOnly && p.kind != KindCNPJ {
+			continue
+		}
+		for _, loc := range p.re.FindAllStringIndex(s, -1) {
+			start, end := loc[0], loc[1]
+			if !hasBoundaries(s, start, end) {
+				continue
+			}
+			if taken != nil && overlaps(taken, start, end) {
+				continue
+			}
+			v := s[start:end]
+			if !validate(p.kind, v) {
+				continue
+			}
+			if taken == nil {
+				taken = make([]bool, len(s)+1)
+			}
+			out = append(out, Match{Kind: p.kind, Value: v, Start: start, End: end})
+			for i := start; i < end; i++ {
+				taken[i] = true
+			}
+		}
+	}
+	return out
+}
+
+func overlaps(taken []bool, start, end int) bool {
+	for i := start; i < end; i++ {
+		if taken[i] {
+			return true
+		}
+	}
+	return false
+}
+
+// validate dispatches a candidate to the validator for its kind.
+func validate(k Kind, v string) bool {
+	switch k {
+	case KindCPF:
+		return ValidateCPF(v)
+	case KindCNPJ:
+		// The CNPJ pattern also matches a bare 14-digit run; require that the
+		// value is not plausibly something else before accepting it.
+		return ValidateCNPJ(v)
+	case KindCNH:
+		return ValidateCNH(v)
+	case KindPIS:
+		return ValidatePIS(v)
+	case KindTitulo:
+		return ValidateTituloEleitor(v)
+	case KindCNS:
+		return ValidateCNS(v)
+	case KindPAN:
+		return ValidateLuhn(v)
+	case KindPixKey:
+		return ValidateChavePix(v)
+	case KindE2EID:
+		return ValidateE2EID(v)
+	default:
+		return false
+	}
+}
+
+// ExtractPixKeys finds Pix keys of the types that are not already covered by
+// document patterns: email, phone and EVP. CPF and CNPJ keys are found by
+// their own extractors.
+var pixKeyRe = regexp.MustCompile(
+	`(?:\+55[0-9]{10,11})` +
+		`|(?:[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})` +
+		`|(?:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})`)
+
+// ExtractPixKeys returns the email, phone and EVP Pix keys in s.
+func ExtractPixKeys(s string) []Match {
+	var out []Match
+	for _, loc := range pixKeyRe.FindAllStringIndex(s, -1) {
+		start, end := loc[0], loc[1]
+		v := s[start:end]
+		if !ValidateChavePix(strings.TrimSpace(v)) {
+			continue
+		}
+		out = append(out, Match{Kind: KindPixKey, Value: v, Start: start, End: end})
+	}
+	return out
+}
