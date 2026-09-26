@@ -1,0 +1,158 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="830" height="240" viewBox="0 0 830 240">
+  <title>nadzor — what shouldn't leave, doesn't</title>
+
+  <!-- detection spark -->
+  <g shape-rendering="crispEdges">
+    <rect x="228" y="38" width="14" height="14" fill="#ff8700"/>
+    <rect x="214" y="52" width="14" height="14" fill="#ffaf00"/>
+    <rect x="200" y="66" width="14" height="14" fill="#ffaf00"/>
+  </g>
+
+  <!-- the eye: oversight -->
+  <g shape-rendering="crispEdges">
+    <rect x="102" y="66" width="14" height="14" fill="#5b21b6"/>
+    <rect x="116" y="66" width="14" height="14" fill="#5b21b6"/>
+    <rect x="130" y="66" width="14" height="14" fill="#5b21b6"/>
+
+    <rect x="74" y="80" width="14" height="14" fill="#4c1d95"/>
+    <rect x="88" y="80" width="14" height="14" fill="#ddd6fe"/>
+    <rect x="102" y="80" width="14" height="14" fill="#ddd6fe"/>
+    <rect x="116" y="80" width="14" height="14" fill="#ddd6fe"/>
+    <rect x="130" y="80" width="14" height="14" fill="#c4b5fd"/>
+    <rect x="144" y="80" width="14" height="14" fill="#c4b5fd"/>
+    <rect x="158" y="80" width="14" height="14" fill="#4c1d95"/>
+
+    <rect x="60" y="94" width="14" height="14" fill="#4c1d95"/>
+    <rect x="74" y="94" width="14" height="14" fill="#ddd6fe"/>
+    <rect x="88" y="94" width="14" height="14" fill="#c4b5fd"/>
+    <rect x="102" y="94" width="14" height="14" fill="#ffd787"/>
+    <rect x="116" y="94" width="14" height="14" fill="#ffaf00"/>
+    <rect x="130" y="94" width="14" height="14" fill="#ff8700"/>
+    <rect x="144" y="94" width="14" height="14" fill="#8b5cf6"/>
+    <rect x="158" y="94" width="14" height="14" fill="#8b5cf6"/>
+    <rect x="172" y="94" width="14" height="14" fill="#4c1d95"/>
+
+    <rect x="46" y="108" width="14" height="14" fill="#4c1d95"/>
+    <rect x="60" y="108" width="14" height="14" fill="#c4b5fd"/>
+    <rect x="74" y="108" width="14" height="14" fill="#a78bfa"/>
+    <rect x="88" y="108" width="14" height="14" fill="#a78bfa"/>
+    <rect x="102" y="108" width="14" height="14" fill="#ffaf00"/>
+    <rect x="116" y="108" width="14" height="14" fill="#ff8700"/>
+    <rect x="130" y="108" width="14" height="14" fill="#d75f00"/>
+    <rect x="144" y="108" width="14" height="14" fill="#7c3aed"/>
+    <rect x="158" y="108" width="14" height="14" fill="#7c3aed"/>
+    <rect x="172" y="108" width="14" height="14" fill="#6d28d9"/>
+    <rect x="186" y="108" width="14" height="14" fill="#4c1d95"/>
+
+    <rect x="60" y="122" width="14" height="14" fill="#4c1d95"/>
+    <rect x="74" y="122" width="14" height="14" fill="#a78bfa"/>
+    <rect x="88" y="122" width="14" height="14" fill="#8b5cf6"/>
+    <rect x="102" y="122" width="14" height="14" fill="#ff8700"/>
+    <rect x="116" y="122" width="14" height="14" fill="#d75f00"/>
+    <rect x="130" y="122" width="14" height="14" fill="#d75f00"/>
+    <rect x="144" y="122" width="14" height="14" fill="#6d28d9"/>
+    <rect x="158" y="122" width="14" height="14" fill="#6d28d9"/>
+    <rect x="172" y="122" width="14" height="14" fill="#4c1d95"/>
+
+    <rect x="74" y="136" width="14" height="14" fill="#4c1d95"/>
+    <rect x="88" y="136" width="14" height="14" fill="#7c3aed"/>
+    <rect x="102" y="136" width="14" height="14" fill="#6d28d9"/>
+    <rect x="116" y="136" width="14" height="14" fill="#6d28d9"/>
+    <rect x="130" y="136" width="14" height="14" fill="#5b21b6"/>
+    <rect x="144" y="136" width="14" height="14" fill="#5b21b6"/>
+    <rect x="158" y="136" width="14" height="14" fill="#4c1d95"/>
+
+    <rect x="102" y="150" width="14" height="14" fill="#4c1d95"/>
+    <rect x="116" y="150" width="14" height="14" fill="#4c1d95"/>
+    <rect x="130" y="150" width="14" height="14" fill="#4c1d95"/>
+  </g>
+
+  <!-- wordmark: n a d z o r -->
+  <g shape-rendering="crispEdges" fill="#8b5cf6">
+    <rect x="290" y="94" width="14" height="14"/>
+    <rect x="304" y="94" width="14" height="14"/>
+    <rect x="318" y="94" width="14" height="14"/>
+    <rect x="332" y="94" width="14" height="14"/>
+    <rect x="290" y="108" width="14" height="14"/>
+    <rect x="346" y="108" width="14" height="14"/>
+    <rect x="290" y="122" width="14" height="14"/>
+    <rect x="346" y="122" width="14" height="14"/>
+    <rect x="290" y="136" width="14" height="14"/>
+    <rect x="346" y="136" width="14" height="14"/>
+    <rect x="290" y="150" width="14" height="14"/>
+    <rect x="346" y="150" width="14" height="14"/>
+
+    <rect x="388" y="94" width="14" height="14"/>
+    <rect x="402" y="94" width="14" height="14"/>
+    <rect x="416" y="94" width="14" height="14"/>
+    <rect x="430" y="108" width="14" height="14"/>
+    <rect x="388" y="122" width="14" height="14"/>
+    <rect x="402" y="122" width="14" height="14"/>
+    <rect x="416" y="122" width="14" height="14"/>
+    <rect x="430" y="122" width="14" height="14"/>
+    <rect x="374" y="136" width="14" height="14"/>
+    <rect x="430" y="136" width="14" height="14"/>
+    <rect x="388" y="150" width="14" height="14"/>
+    <rect x="402" y="150" width="14" height="14"/>
+    <rect x="416" y="150" width="14" height="14"/>
+    <rect x="430" y="150" width="14" height="14"/>
+
+    <rect x="514" y="52" width="14" height="14"/>
+    <rect x="514" y="66" width="14" height="14"/>
+    <rect x="514" y="80" width="14" height="14"/>
+    <rect x="472" y="94" width="14" height="14"/>
+    <rect x="486" y="94" width="14" height="14"/>
+    <rect x="500" y="94" width="14" height="14"/>
+    <rect x="514" y="94" width="14" height="14"/>
+    <rect x="458" y="108" width="14" height="14"/>
+    <rect x="514" y="108" width="14" height="14"/>
+    <rect x="458" y="122" width="14" height="14"/>
+    <rect x="514" y="122" width="14" height="14"/>
+    <rect x="458" y="136" width="14" height="14"/>
+    <rect x="514" y="136" width="14" height="14"/>
+    <rect x="472" y="150" width="14" height="14"/>
+    <rect x="486" y="150" width="14" height="14"/>
+    <rect x="500" y="150" width="14" height="14"/>
+    <rect x="514" y="150" width="14" height="14"/>
+
+    <rect x="542" y="94" width="14" height="14"/>
+    <rect x="556" y="94" width="14" height="14"/>
+    <rect x="570" y="94" width="14" height="14"/>
+    <rect x="584" y="94" width="14" height="14"/>
+    <rect x="598" y="94" width="14" height="14"/>
+    <rect x="584" y="108" width="14" height="14"/>
+    <rect x="570" y="122" width="14" height="14"/>
+    <rect x="556" y="136" width="14" height="14"/>
+    <rect x="542" y="150" width="14" height="14"/>
+    <rect x="556" y="150" width="14" height="14"/>
+    <rect x="570" y="150" width="14" height="14"/>
+    <rect x="584" y="150" width="14" height="14"/>
+    <rect x="598" y="150" width="14" height="14"/>
+
+    <rect x="640" y="94" width="14" height="14"/>
+    <rect x="654" y="94" width="14" height="14"/>
+    <rect x="668" y="94" width="14" height="14"/>
+    <rect x="626" y="108" width="14" height="14"/>
+    <rect x="682" y="108" width="14" height="14"/>
+    <rect x="626" y="122" width="14" height="14"/>
+    <rect x="682" y="122" width="14" height="14"/>
+    <rect x="626" y="136" width="14" height="14"/>
+    <rect x="682" y="136" width="14" height="14"/>
+    <rect x="640" y="150" width="14" height="14"/>
+    <rect x="654" y="150" width="14" height="14"/>
+    <rect x="668" y="150" width="14" height="14"/>
+
+    <rect x="710" y="94" width="14" height="14"/>
+    <rect x="724" y="94" width="14" height="14"/>
+    <rect x="738" y="94" width="14" height="14"/>
+    <rect x="752" y="94" width="14" height="14"/>
+    <rect x="710" y="108" width="14" height="14"/>
+    <rect x="710" y="122" width="14" height="14"/>
+    <rect x="710" y="136" width="14" height="14"/>
+    <rect x="710" y="150" width="14" height="14"/>
+  </g>
+
+  <text x="290" y="208" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"
+        font-size="26" fill="#808080" font-style="italic"
+        textLength="490" lengthAdjust="spacingAndGlyphs">what shouldn't leave, doesn't</text>
+</svg>
