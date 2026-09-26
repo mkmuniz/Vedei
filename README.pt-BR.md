@@ -16,7 +16,7 @@
 
 ## Estado
 
-**M0 concluído — só o alicerce. Nenhuma detecção funciona ainda.** Precisa de ferramenta hoje? Use [betterleaks](https://github.com/betterleaks/betterleaks) ou [kingfisher](https://github.com/mongodb/kingfisher). O nadzor é construído sobre o primeiro.
+**M2 concluído — a detecção funciona como biblioteca Go; ainda não há CLI.** Precisa de ferramenta hoje? Use [betterleaks](https://github.com/betterleaks/betterleaks) ou [kingfisher](https://github.com/mongodb/kingfisher). O nadzor é construído sobre o primeiro.
 
 ## O que detecta
 
@@ -94,8 +94,8 @@ Registros completos em [`docs/adr/`](docs/adr/).
 | | Milestone | Estado |
 |---|---|---|
 | M0 | Fundação | ✅ |
-| M1 | Detectores BR + validação offline | ⬜ |
-| M2 | Motor de segredos via betterleaks | ⬜ |
+| M1 | Detectores BR + validação offline | ✅ |
+| M2 | Motor de segredos via betterleaks | ✅ |
 | M3 | **MVP — superfície de IA** | ⬜ |
 | M4 | CLI, CI/CD, SARIF, scrub de transcript | ⬜ |
 | M5 | Corpus multilíngue + calibração pt-BR | ⬜ |

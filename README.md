@@ -17,7 +17,7 @@
 
 ## Status
 
-**M0 done — scaffolding only. No detection works yet.** Need a working tool today? Use [betterleaks](https://github.com/betterleaks/betterleaks) or [kingfisher](https://github.com/mongodb/kingfisher). nadzor builds on the former.
+**M2 done — detection works as a Go library; there is no CLI yet.** Need a working tool today? Use [betterleaks](https://github.com/betterleaks/betterleaks) or [kingfisher](https://github.com/mongodb/kingfisher). nadzor builds on the former.
 
 ## What it detects
 
@@ -95,8 +95,8 @@ Full records in [`docs/adr/`](docs/adr/).
 | | Milestone | Status |
 |---|---|---|
 | M0 | Foundation | ✅ |
-| M1 | Brazilian detectors + offline validation | ⬜ |
-| M2 | Secret engine via betterleaks | ⬜ |
+| M1 | Brazilian detectors + offline validation | ✅ |
+| M2 | Secret engine via betterleaks | ✅ |
 | M3 | **MVP — AI agent surface** | ⬜ |
 | M4 | CLI, CI/CD, SARIF, transcript scrub | ⬜ |
 | M5 | Multilingual false-positive corpus + pt-BR calibration | ⬜ |
