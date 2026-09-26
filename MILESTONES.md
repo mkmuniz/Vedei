@@ -34,7 +34,7 @@ Premissa de esforço: ~10 h por semana.
 
 ### O que implementar
 
-1. `go.mod` — módulo `github.com/mkmuniz/nadzor`, Go 1.25
+1. `go.mod` — módulo `github.com/mkmuniz/nadzor`, Go 1.27
 2. `LICENSE` — MIT
 3. `SECURITY.md` — canal privado de divulgação; obrigatório em ferramenta de segurança
 4. `CONTRIBUTING.md` — como um detector novo é aceito (regex + validador + corpus de teste)

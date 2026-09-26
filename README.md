@@ -5,7 +5,7 @@
 **Finds and validates Brazilian sensitive data and leaked secrets — offline, with check digits, before they reach your logs, your CI, or your AI agent's context.**
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Go](https://img.shields.io/badge/go-1.25-00ADD8.svg)](go.mod)
+[![Go](https://img.shields.io/badge/go-1.27-00ADD8.svg)](go.mod)
 [![Status](https://img.shields.io/badge/status-early%20development-orange.svg)](#status)
 
 </div>
