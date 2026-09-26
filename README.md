@@ -73,9 +73,18 @@ Four surfaces, one engine. They ship in this order, and only the first is the MV
 | Surface | What it does | Status |
 |---|---|---|
 | **AI agent context** | A `PostToolUse` hook for Claude Code and Codex. When the agent runs `cat .env`, the secret and the CPF are redacted before the output reaches the model | 🎯 MVP |
+| **Agent transcripts** | `nadzor transcript scan` audits what already leaked into `~/.claude/projects/*.jsonl` — plaintext, unencrypted, never rotated. `scrub` redacts it | 🎯 MVP |
 | **CI/CD** | CLI, GitHub Action, SARIF for GitHub Code Scanning, pre-commit and pre-receive hooks | planned |
 | **Application runtime** | A `slog.Handler` and HTTP middleware that redact before writing — prevention, not detection | planned |
 | **Observability** | An OpenTelemetry collector processor for logs and traces, where PANs and CPFs actually leak | planned |
+
+### Why the transcript matters
+
+An agent transcript is an unguarded aggregation point. A `.env` file has protections — gitignore, file permissions, a vault. `~/.claude/projects/*.jsonl` has none: plaintext, no encryption, no rotation, no expiry, and no security tool watching it. Whoever reads the disk — malware, a stolen laptop, an exfiltrated backup — reads every secret the agent ever touched, plus the architecture of your projects and any customer data you pasted into a prompt.
+
+nadzor reduces what lands there going forward, and shows what is already there. It does not replace full-disk encryption: an attacker holding the machine also holds your SSH keys. It closes a specific gap that nothing else covers.
+
+Documented in Claude Code's own issue tracker: [#44868](https://github.com/anthropics/claude-code/issues/44868), [#50014](https://github.com/anthropics/claude-code/issues/50014), [#95680](https://github.com/anthropics/claude-code/issues/95680).
 
 ## Design principles (non-negotiable)
 
@@ -88,6 +97,8 @@ Four surfaces, one engine. They ship in this order, and only the first is the MV
 7. **Thresholds are calibrated per language.** English-tuned heuristics misbehave on Portuguese source; see [Roadmap](#roadmap) M5.
 
 ## Roadmap
+
+Full detail — features, implementation steps, test strategy and exit criteria per stage — in [`MILESTONES.md`](MILESTONES.md). Component design, contracts and performance budgets in [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
 | | Milestone | Status |
 |---|---|---|
