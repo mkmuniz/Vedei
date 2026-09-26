@@ -72,6 +72,15 @@ func (e *Engine) Scan(_ context.Context, content []byte, meta detect.Metadata) (
 		if m.Kind == brdetect.KindPAN {
 			f.Extra = map[string]string{"brand": string(brdetect.DetectCardBrand(m.Value))}
 		}
+		if m.Kind == brdetect.KindE2EID {
+			if e2e, ok := brdetect.ParseE2EID(m.Value); ok {
+				f.Extra = map[string]string{
+					"ispb":        e2e.ISPB,
+					"institution": e2e.Institution.Name,
+					"timestamp":   e2e.Timestamp.Format("2006-01-02 15:04"),
+				}
+			}
+		}
 		if m.Kind == brdetect.KindPixKey {
 			t, _ := brdetect.ClassifyPixKey(m.Value)
 			f.Extra = map[string]string{"pix_key_type": string(t)}
@@ -98,7 +107,8 @@ func (e *Engine) Scan(_ context.Context, content []byte, meta detect.Metadata) (
 // eleven-digit run is a common shape and the algorithm is weaker than CPF's.
 func confidenceFor(k brdetect.Kind) detect.Confidence {
 	switch k {
-	case brdetect.KindCPF, brdetect.KindCNPJ, brdetect.KindPAN, brdetect.KindPixKey:
+	case brdetect.KindCPF, brdetect.KindCNPJ, brdetect.KindPAN,
+		brdetect.KindPixKey, brdetect.KindE2EID:
 		return detect.ConfidenceHigh
 	case brdetect.KindCNS, brdetect.KindCNH:
 		return detect.ConfidenceMedium
@@ -113,6 +123,8 @@ func reasonFor(k brdetect.Kind) string {
 		return "luhn checksum ok"
 	case brdetect.KindPixKey:
 		return "well-formed Pix key"
+	case brdetect.KindE2EID:
+		return "well-formed Pix end-to-end id from a registered institution"
 	case brdetect.KindCNS:
 		return "mod 11 ok; position five is unprotected by the scheme"
 	default:

@@ -35,3 +35,8 @@ install-tools:
 
 clean:
 	rm -rf bin coverage.out
+
+# Rebuilds the embedded ISPB registry from the upstream dataset.
+update-ispb:
+	go run ./internal/cmd/genispb
+	go test ./detect/br/ -run TestISPB

@@ -18,6 +18,7 @@ const (
 	KindCNS    Kind = "cns"
 	KindPAN    Kind = "card-pan"
 	KindPixKey Kind = "pix-key"
+	KindE2EID  Kind = "pix-e2eid"
 )
 
 // Match is one candidate found in text, before validation.
@@ -42,6 +43,7 @@ var patterns = []struct {
 	kind Kind
 	re   *regexp.Regexp
 }{
+	{KindE2EID, regexp.MustCompile(`[Ee][0-9]{8}[0-9]{12}[0-9A-Za-z]{11}`)},
 	{KindCNPJ, regexp.MustCompile(`[0-9A-Za-z]{2}\.?[0-9A-Za-z]{3}\.?[0-9A-Za-z]{3}/?[0-9A-Za-z]{4}-?[0-9]{2}`)},
 	{KindCNS, regexp.MustCompile(`[1-2789][0-9]{2}[\s.]?[0-9]{4}[\s.]?[0-9]{4}[\s.]?[0-9]{4}`)},
 	{KindTitulo, regexp.MustCompile(`[0-9]{4}[\s.]?[0-9]{4}[\s.]?[0-9]{4}`)},
@@ -228,6 +230,8 @@ func validate(k Kind, v string) bool {
 		return ValidateLuhn(v)
 	case KindPixKey:
 		return ValidateChavePix(v)
+	case KindE2EID:
+		return ValidateE2EID(v)
 	default:
 		return false
 	}
