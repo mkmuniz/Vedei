@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"strings"
 	"testing"
+	"time"
 )
 
 func kindsOf(ms []Match) []Kind {
@@ -175,5 +176,61 @@ func BenchmarkExtract(b *testing.B) {
 	b.SetBytes(int64(len(text)))
 	for i := 0; i < b.N; i++ {
 		Extract(text)
+	}
+}
+
+// Throughput is a security property here, not a nicety: nadzor scans content
+// it does not control, so a pattern that collapses on adversarial input is a
+// denial-of-service opening. ExtractPixKeys once ran at 11 MB/s because its
+// alternation regex had no gate; these bounds keep that from returning.
+func TestExtractPixKeys_ThroughputOnAdversarialInput(t *testing.T) {
+	if testing.Short() {
+		t.Skip("throughput check skipped in short mode")
+	}
+
+	cases := []struct {
+		name   string
+		line   string
+		floorM float64 // MB/s below which this is a regression
+	}{
+		{"prose", "linha sem nada de sensivel aqui nenhum dado\n", 300},
+		// Kebab-case is everywhere in real source and opens the UUID gate if
+		// that gate only requires a single hyphen.
+		{"kebab case", "const my-var-name = other-thing-here;\n", 25},
+		{"comment rules", "// ---------------------------------------\n", 25},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			text := strings.Repeat(c.line, 100_000)
+			mb := float64(len(text)) / 1024 / 1024
+
+			start := time.Now()
+			ExtractPixKeys(text)
+			rate := mb / time.Since(start).Seconds()
+
+			t.Logf("%.1f MB/s", rate)
+			if rate < c.floorM {
+				t.Errorf("throughput %.1f MB/s is below the %.0f MB/s floor; a gate was probably lost", rate, c.floorM)
+			}
+		})
+	}
+}
+
+// The same guarantee for the document patterns.
+func TestExtract_ThroughputFloor(t *testing.T) {
+	if testing.Short() {
+		t.Skip("throughput check skipped in short mode")
+	}
+	text := strings.Repeat("linha de codigo qualquer sem dado nenhum aqui\n", 100_000)
+	mb := float64(len(text)) / 1024 / 1024
+
+	start := time.Now()
+	Extract(text)
+	rate := mb / time.Since(start).Seconds()
+
+	t.Logf("%.1f MB/s", rate)
+	if rate < 100 {
+		t.Errorf("throughput %.1f MB/s is below the 100 MB/s floor", rate)
 	}
 }

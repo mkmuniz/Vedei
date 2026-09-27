@@ -1,10 +1,14 @@
 package secrets
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"strings"
 	"testing"
+
+	bllogging "github.com/betterleaks/betterleaks/logging"
+	"github.com/rs/zerolog"
 
 	"github.com/mkmuniz/nadzor/detect"
 )
@@ -131,3 +135,26 @@ func TestCapabilities_OfflineUntilM9(t *testing.T) {
 }
 
 var _ detect.Engine = (*Engine)(nil)
+
+// betterleaks attaches the detected secret as a log field in five places.
+// Those all emit at Debug and its default level is Info, so nothing leaks
+// today — but logging.Logger is an exported package variable, and ADR-003
+// cannot rest on someone else's default. This test raises the level to Trace
+// and captures stderr: if the adapter ever stops disabling that logger, the
+// secret appears here and the build fails.
+func TestScan_UpstreamLoggerCannotEmitTheSecret(t *testing.T) {
+	var captured bytes.Buffer
+	bllogging.Logger = zerolog.New(&captured).Level(zerolog.TraceLevel)
+
+	e := New()
+	if _, err := e.Scan(context.Background(), []byte(`k = "`+stripeKey+`"`), detect.Metadata{}); err != nil {
+		t.Fatalf("scan: %v", err)
+	}
+
+	if strings.Contains(captured.String(), stripeKey) {
+		t.Fatalf("the secret reached the upstream log: %s", captured.String())
+	}
+	if captured.Len() != 0 {
+		t.Errorf("upstream logger should be silent, wrote: %s", captured.String())
+	}
+}

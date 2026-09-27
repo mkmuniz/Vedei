@@ -8,7 +8,9 @@ import (
 	"time"
 
 	bldetect "github.com/betterleaks/betterleaks/detect"
+	bllogging "github.com/betterleaks/betterleaks/logging"
 	blreport "github.com/betterleaks/betterleaks/report"
+	"github.com/rs/zerolog"
 
 	"github.com/mkmuniz/nadzor/detect"
 	"github.com/mkmuniz/nadzor/fingerprint"
@@ -59,8 +61,29 @@ func (e *Engine) RuleCount() (int, error) {
 	return len(e.detector.Config.Rules), nil
 }
 
+// silenceUpstreamLogger disables betterleaks' package-level logger.
+//
+// It attaches the detected secret as a log field in five places, for example
+//
+//	logger := logging.With().Str("finding", finding.Secret).Logger()
+//
+// Every one of those emits at Debug and its default level is Info, so
+// nothing leaks today. That is a default, not a guarantee: logging.Logger is
+// an exported package variable, so any dependency, any future version, or
+// anyone debugging can raise the level and start writing credentials to
+// stderr.
+//
+// ADR-003 says a detected value never leaves the process. Relying on someone
+// else's default level is not a way to keep that promise, so the logger is
+// disabled outright. nadzor does not use its output for anything.
+func silenceUpstreamLogger() {
+	bllogging.Logger = zerolog.Nop()
+}
+
 func (e *Engine) init() error {
 	e.once.Do(func() {
+		silenceUpstreamLogger()
+
 		d, err := bldetect.NewDetectorDefaultConfig()
 		if err != nil {
 			e.initErr = fmt.Errorf("loading betterleaks rules: %w", err)

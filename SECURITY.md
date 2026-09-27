@@ -40,3 +40,27 @@ Until v1.0, only the latest release receives fixes.
 |---|---|
 | latest | ✅ |
 | older | ❌ |
+
+## Known limitations
+
+Stated here rather than discovered by a user.
+
+**Memory scales with input size.** `Scan` copies the content it is given, so
+peak use is roughly twice the input. A 1 GB file needs about 2 GB. Streaming
+arrives with the CLI in M4; until then, do not point the library at
+arbitrarily large input.
+
+**The upstream corpus brings its own false positives.** betterleaks filters
+candidates with a token-efficiency ratio calibrated on a 33,775-word English
+dictionary. Portuguese text sits far closer to the threshold than English
+does — `senhapadrao` scores 2.20 and is reported, `defaultpassword` scores
+7.50 and is correctly discarded — so a Portuguese codebase sees more noise
+from the secrets engine. M5 measures and corrects this.
+
+**124 transitive dependencies.** Two direct ones, of which betterleaks
+brings the rest, including cloud SDKs it uses for credential validation that
+nadzor does not enable. Running `govulncheck` is part of CI for that reason.
+
+**A structurally valid document may still be fabricated.** nadzor validates
+check digits, never identity, and never will (ADR-002). A generated CPF in a
+test fixture is indistinguishable from a real one by arithmetic alone.
