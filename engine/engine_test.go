@@ -46,7 +46,7 @@ func TestAll_BothEnginesOverOneFile(t *testing.T) {
 	}
 
 	// Each engine must have contributed.
-	for _, want := range []string{"cpf", "cnpj", "card-pan", "pix-e2eid"} {
+	for _, want := range []string{"cpf", "cnpj", "card-pan", "pix-e2eid", "pix-key"} {
 		if _, ok := byType[want]; !ok {
 			t.Errorf("Brazilian engine missed %s", want)
 		}
