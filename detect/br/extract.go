@@ -237,24 +237,99 @@ func validate(k Kind, v string) bool {
 	}
 }
 
-// ExtractPixKeys finds Pix keys of the types that are not already covered by
-// document patterns: email, phone and EVP. CPF and CNPJ keys are found by
-// their own extractors.
-var pixKeyRe = regexp.MustCompile(
-	`(?:\+55[0-9]{10,11})` +
-		`|(?:[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})` +
-		`|(?:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})`)
+// Pix keys that are not documents come in three shapes, each with its own
+// pattern and its own cheap gate. They are kept separate rather than joined
+// into one alternation because a combined regex must be run whenever any of
+// the three gates opens, and the UUID gate opens on almost every line of
+// real code.
+var (
+	pixEmailRe = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
+	pixPhoneRe = regexp.MustCompile(`\+55[0-9]{10,11}`)
+	pixEVPRe   = regexp.MustCompile(`[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}`)
+)
 
-// ExtractPixKeys returns the email, phone and EVP Pix keys in s.
+// mayHoldUUID reports whether a line contains the start of a UUID: eight hex
+// digits, a hyphen, four hex digits, another hyphen.
+//
+// Counting hyphens is not enough. A UUID has four, but so does
+// "const my-var-name = other-thing-here", and kebab-case is everywhere in
+// source. Checking the layout instead costs one pass and closes the gate on
+// ordinary code, which is the difference between the pattern running on
+// every line of a repository and running on almost none.
+func mayHoldUUID(s string) bool {
+	for i := 8; i+5 < len(s); i++ {
+		if s[i] != '-' || s[i+5] != '-' {
+			continue
+		}
+		if isHexRun(s[i-8:i]) && isHexRun(s[i+1:i+5]) {
+			return true
+		}
+	}
+	return false
+}
+
+func isHexRun(s string) bool {
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		isHex := (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')
+		if !isHex {
+			return false
+		}
+	}
+	return true
+}
+
+// ExtractPixKeys returns the email, phone and EVP Pix keys in s. CPF and
+// CNPJ keys are found by their own document extractors.
+//
+// Each pattern runs only on lines that could possibly match it. Without
+// this, the regexes cost 11 MB/s against 538 MB/s for the document
+// patterns — slow enough to be a denial-of-service opening for anything
+// scanning attacker-supplied content.
 func ExtractPixKeys(s string) []Match {
 	var out []Match
-	for _, loc := range pixKeyRe.FindAllStringIndex(s, -1) {
-		start, end := loc[0], loc[1]
-		v := s[start:end]
+	offset := 0
+
+	for offset <= len(s) {
+		end := strings.IndexByte(s[offset:], '\n')
+		var line string
+		if end < 0 {
+			line, end = s[offset:], len(s)-offset
+		} else {
+			line = s[offset : offset+end]
+		}
+
+		out = appendPixMatches(out, line, offset)
+		offset += end + 1
+	}
+	return out
+}
+
+func appendPixMatches(out []Match, line string, offset int) []Match {
+	if strings.IndexByte(line, '@') >= 0 {
+		out = collect(out, pixEmailRe, line, offset)
+	}
+	if strings.Contains(line, "+55") {
+		out = collect(out, pixPhoneRe, line, offset)
+	}
+	if mayHoldUUID(line) {
+		out = collect(out, pixEVPRe, line, offset)
+	}
+	return out
+}
+
+func collect(out []Match, re *regexp.Regexp, line string, offset int) []Match {
+	for _, loc := range re.FindAllStringIndex(line, -1) {
+		v := line[loc[0]:loc[1]]
 		if !ValidateChavePix(strings.TrimSpace(v)) {
 			continue
 		}
-		out = append(out, Match{Kind: KindPixKey, Value: v, Start: start, End: end})
+		out = append(out, Match{
+			Kind:  KindPixKey,
+			Value: v,
+			Start: offset + loc[0],
+			End:   offset + loc[1],
+		})
 	}
 	return out
 }

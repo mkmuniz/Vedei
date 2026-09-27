@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"strings"
 	"testing"
+	"time"
 )
 
 func kindsOf(ms []Match) []Kind {
@@ -175,5 +176,129 @@ func BenchmarkExtract(b *testing.B) {
 	b.SetBytes(int64(len(text)))
 	for i := 0; i < b.N; i++ {
 		Extract(text)
+	}
+}
+
+// Throughput is a security property here, not a nicety: nadzor scans content
+// it does not control, so a pattern that collapses on adversarial input is a
+// denial-of-service opening. ExtractPixKeys once ran 46x slower than the
+// document patterns because its alternation regex had no gate.
+//
+// The assertion is a ratio against Extract over the same input, not an
+// absolute rate. An absolute floor is a bad test: it depends on the machine
+// and on whether the race detector is on, and CI has neither the hardware
+// nor the conditions a laptop does. A ratio survives both, because whatever
+// slows one path slows the other.
+func TestExtractPixKeys_NotCatastrophicallySlowerThanExtract(t *testing.T) {
+	if testing.Short() {
+		t.Skip("timing comparison skipped in short mode")
+	}
+
+	cases := []struct {
+		name string
+		line string
+	}{
+		{"prose", "linha sem nada de sensivel aqui nenhum dado\n"},
+		// Kebab-case is everywhere in real source and opens the UUID gate if
+		// that gate only requires a single hyphen, which was the first and
+		// useless version of it.
+		{"kebab case", "const my-var-name = other-thing-here;\n"},
+		{"comment rules", "// ---------------------------------------\n"},
+	}
+
+	// Generous enough to absorb scheduling noise on a shared CI runner, tight
+	// enough to catch the 46x regression that prompted this test.
+	const maxRatio = 12.0
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			text := strings.Repeat(c.line, 50_000)
+
+			// Warm up so neither measurement pays for first-use costs.
+			Extract(text)
+			ExtractPixKeys(text)
+
+			start := time.Now()
+			Extract(text)
+			baseline := time.Since(start)
+
+			start = time.Now()
+			ExtractPixKeys(text)
+			pix := time.Since(start)
+
+			if baseline <= 0 {
+				t.Skip("baseline too fast to measure reliably")
+			}
+			ratio := float64(pix) / float64(baseline)
+			t.Logf("Extract %v, ExtractPixKeys %v, ratio %.1fx", baseline, pix, ratio)
+
+			if ratio > maxRatio {
+				t.Errorf("ExtractPixKeys is %.1fx slower than Extract (limit %.0fx); a gate was probably lost",
+					ratio, maxRatio)
+			}
+		})
+	}
+}
+
+// Extract must stay linear in input size. Doubling the input should roughly
+// double the time; anything superlinear is a denial-of-service opening, and
+// unlike a rate this holds on any machine.
+func TestExtract_ScalesLinearly(t *testing.T) {
+	if testing.Short() {
+		t.Skip("timing comparison skipped in short mode")
+	}
+
+	line := "linha de codigo qualquer sem dado nenhum aqui\n"
+	small := strings.Repeat(line, 25_000)
+	large := strings.Repeat(line, 100_000) // 4x the input
+
+	Extract(small)
+
+	start := time.Now()
+	Extract(small)
+	tSmall := time.Since(start)
+
+	start = time.Now()
+	Extract(large)
+	tLarge := time.Since(start)
+
+	if tSmall <= 0 {
+		t.Skip("baseline too fast to measure reliably")
+	}
+	ratio := float64(tLarge) / float64(tSmall)
+	t.Logf("4x the input took %.1fx the time (%v -> %v)", ratio, tSmall, tLarge)
+
+	// Linear would be 4x. Allow generous headroom for noise; quadratic on a
+	// 4x input would be 16x and fails here.
+	if ratio > 10 {
+		t.Errorf("4x input took %.1fx the time; Extract is not scaling linearly", ratio)
+	}
+}
+
+// The gate must stay closed on ordinary source and open on a real key.
+// Counting hyphens was not enough: kebab-case has four of them.
+func TestMayHoldUUID_GateIsTight(t *testing.T) {
+	closed := []string{
+		"const my-var-name = other-thing-here;",
+		"// ---------------------------------------",
+		"background-color: light-blue; border-top-width: 1px",
+		"2026-09-26 14:30:00 -0300",
+		"",
+	}
+	for _, s := range closed {
+		if mayHoldUUID(s) {
+			t.Errorf("gate opened on ordinary source: %q", s)
+		}
+	}
+
+	open := []string{
+		"chave 123e4567-e89b-42d3-a456-426614174000 aqui",
+		"123e4567-e89b-42d3-a456-426614174000",
+		"ABCDEF01-2345-4678-89AB-CDEF01234567",
+	}
+	for _, s := range open {
+		if !mayHoldUUID(s) {
+			t.Errorf("gate closed on a real UUID: %q", s)
+		}
 	}
 }
