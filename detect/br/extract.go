@@ -248,10 +248,36 @@ var (
 	pixEVPRe   = regexp.MustCompile(`[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}`)
 )
 
-// uuidHyphens is how many hyphens a UUID contains. Requiring that many on a
-// line is a far tighter gate than requiring one: kebab-case identifiers and
-// comment rules are everywhere in source, four-hyphen lines are not.
-const uuidHyphens = 4
+// mayHoldUUID reports whether a line contains the start of a UUID: eight hex
+// digits, a hyphen, four hex digits, another hyphen.
+//
+// Counting hyphens is not enough. A UUID has four, but so does
+// "const my-var-name = other-thing-here", and kebab-case is everywhere in
+// source. Checking the layout instead costs one pass and closes the gate on
+// ordinary code, which is the difference between the pattern running on
+// every line of a repository and running on almost none.
+func mayHoldUUID(s string) bool {
+	for i := 8; i+5 < len(s); i++ {
+		if s[i] != '-' || s[i+5] != '-' {
+			continue
+		}
+		if isHexRun(s[i-8:i]) && isHexRun(s[i+1:i+5]) {
+			return true
+		}
+	}
+	return false
+}
+
+func isHexRun(s string) bool {
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		isHex := (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')
+		if !isHex {
+			return false
+		}
+	}
+	return true
+}
 
 // ExtractPixKeys returns the email, phone and EVP Pix keys in s. CPF and
 // CNPJ keys are found by their own document extractors.
@@ -286,7 +312,7 @@ func appendPixMatches(out []Match, line string, offset int) []Match {
 	if strings.Contains(line, "+55") {
 		out = collect(out, pixPhoneRe, line, offset)
 	}
-	if strings.Count(line, "-") >= uuidHyphens {
+	if mayHoldUUID(line) {
 		out = collect(out, pixEVPRe, line, offset)
 	}
 	return out

@@ -181,56 +181,124 @@ func BenchmarkExtract(b *testing.B) {
 
 // Throughput is a security property here, not a nicety: nadzor scans content
 // it does not control, so a pattern that collapses on adversarial input is a
-// denial-of-service opening. ExtractPixKeys once ran at 11 MB/s because its
-// alternation regex had no gate; these bounds keep that from returning.
-func TestExtractPixKeys_ThroughputOnAdversarialInput(t *testing.T) {
+// denial-of-service opening. ExtractPixKeys once ran 46x slower than the
+// document patterns because its alternation regex had no gate.
+//
+// The assertion is a ratio against Extract over the same input, not an
+// absolute rate. An absolute floor is a bad test: it depends on the machine
+// and on whether the race detector is on, and CI has neither the hardware
+// nor the conditions a laptop does. A ratio survives both, because whatever
+// slows one path slows the other.
+func TestExtractPixKeys_NotCatastrophicallySlowerThanExtract(t *testing.T) {
 	if testing.Short() {
-		t.Skip("throughput check skipped in short mode")
+		t.Skip("timing comparison skipped in short mode")
 	}
 
 	cases := []struct {
-		name   string
-		line   string
-		floorM float64 // MB/s below which this is a regression
+		name string
+		line string
 	}{
-		{"prose", "linha sem nada de sensivel aqui nenhum dado\n", 300},
+		{"prose", "linha sem nada de sensivel aqui nenhum dado\n"},
 		// Kebab-case is everywhere in real source and opens the UUID gate if
-		// that gate only requires a single hyphen.
-		{"kebab case", "const my-var-name = other-thing-here;\n", 25},
-		{"comment rules", "// ---------------------------------------\n", 25},
+		// that gate only requires a single hyphen, which was the first and
+		// useless version of it.
+		{"kebab case", "const my-var-name = other-thing-here;\n"},
+		{"comment rules", "// ---------------------------------------\n"},
 	}
+
+	// Generous enough to absorb scheduling noise on a shared CI runner, tight
+	// enough to catch the 46x regression that prompted this test.
+	const maxRatio = 12.0
 
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			text := strings.Repeat(c.line, 100_000)
-			mb := float64(len(text)) / 1024 / 1024
+			text := strings.Repeat(c.line, 50_000)
+
+			// Warm up so neither measurement pays for first-use costs.
+			Extract(text)
+			ExtractPixKeys(text)
 
 			start := time.Now()
-			ExtractPixKeys(text)
-			rate := mb / time.Since(start).Seconds()
+			Extract(text)
+			baseline := time.Since(start)
 
-			t.Logf("%.1f MB/s", rate)
-			if rate < c.floorM {
-				t.Errorf("throughput %.1f MB/s is below the %.0f MB/s floor; a gate was probably lost", rate, c.floorM)
+			start = time.Now()
+			ExtractPixKeys(text)
+			pix := time.Since(start)
+
+			if baseline <= 0 {
+				t.Skip("baseline too fast to measure reliably")
+			}
+			ratio := float64(pix) / float64(baseline)
+			t.Logf("Extract %v, ExtractPixKeys %v, ratio %.1fx", baseline, pix, ratio)
+
+			if ratio > maxRatio {
+				t.Errorf("ExtractPixKeys is %.1fx slower than Extract (limit %.0fx); a gate was probably lost",
+					ratio, maxRatio)
 			}
 		})
 	}
 }
 
-// The same guarantee for the document patterns.
-func TestExtract_ThroughputFloor(t *testing.T) {
+// Extract must stay linear in input size. Doubling the input should roughly
+// double the time; anything superlinear is a denial-of-service opening, and
+// unlike a rate this holds on any machine.
+func TestExtract_ScalesLinearly(t *testing.T) {
 	if testing.Short() {
-		t.Skip("throughput check skipped in short mode")
+		t.Skip("timing comparison skipped in short mode")
 	}
-	text := strings.Repeat("linha de codigo qualquer sem dado nenhum aqui\n", 100_000)
-	mb := float64(len(text)) / 1024 / 1024
+
+	line := "linha de codigo qualquer sem dado nenhum aqui\n"
+	small := strings.Repeat(line, 25_000)
+	large := strings.Repeat(line, 100_000) // 4x the input
+
+	Extract(small)
 
 	start := time.Now()
-	Extract(text)
-	rate := mb / time.Since(start).Seconds()
+	Extract(small)
+	tSmall := time.Since(start)
 
-	t.Logf("%.1f MB/s", rate)
-	if rate < 100 {
-		t.Errorf("throughput %.1f MB/s is below the 100 MB/s floor", rate)
+	start = time.Now()
+	Extract(large)
+	tLarge := time.Since(start)
+
+	if tSmall <= 0 {
+		t.Skip("baseline too fast to measure reliably")
+	}
+	ratio := float64(tLarge) / float64(tSmall)
+	t.Logf("4x the input took %.1fx the time (%v -> %v)", ratio, tSmall, tLarge)
+
+	// Linear would be 4x. Allow generous headroom for noise; quadratic on a
+	// 4x input would be 16x and fails here.
+	if ratio > 10 {
+		t.Errorf("4x input took %.1fx the time; Extract is not scaling linearly", ratio)
+	}
+}
+
+// The gate must stay closed on ordinary source and open on a real key.
+// Counting hyphens was not enough: kebab-case has four of them.
+func TestMayHoldUUID_GateIsTight(t *testing.T) {
+	closed := []string{
+		"const my-var-name = other-thing-here;",
+		"// ---------------------------------------",
+		"background-color: light-blue; border-top-width: 1px",
+		"2026-09-26 14:30:00 -0300",
+		"",
+	}
+	for _, s := range closed {
+		if mayHoldUUID(s) {
+			t.Errorf("gate opened on ordinary source: %q", s)
+		}
+	}
+
+	open := []string{
+		"chave 123e4567-e89b-42d3-a456-426614174000 aqui",
+		"123e4567-e89b-42d3-a456-426614174000",
+		"ABCDEF01-2345-4678-89AB-CDEF01234567",
+	}
+	for _, s := range open {
+		if !mayHoldUUID(s) {
+			t.Errorf("gate closed on a real UUID: %q", s)
+		}
 	}
 }
