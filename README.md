@@ -97,7 +97,7 @@ Full records in [`docs/adr/`](docs/adr/).
 | M0 | Foundation | ✅ |
 | M1 | Brazilian detectors + offline validation | ✅ |
 | M2 | Secret engine via betterleaks | ✅ |
-| M3 | **MVP — AI agent surface** | ⬜ |
+| M3 | **MVP — AI agent surface** | 🚧 |
 | M4 | CLI, CI/CD, SARIF, transcript scrub | ⬜ |
 | M5 | Multilingual false-positive corpus + pt-BR calibration | ⬜ |
 | M6 | Runtime SDK | ⬜ |

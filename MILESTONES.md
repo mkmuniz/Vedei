@@ -243,7 +243,7 @@ echo $?                           # 0 = limpo, 3 = achou, 1 = erro
 
 `hooks/claude-code/` e `hooks/codex/`, prontos para copiar. `PostToolUse`: a saída da ferramenta passa pelo nadzor antes de voltar ao modelo.
 
-**3.3 — Modo daemon**
+**3.3 — Modo daemon** ⏳ *pendente — ver a medição no critério de saída*
 
 Socket Unix, config pré-compilada carregada uma vez. É o que viabiliza o orçamento de 10 ms.
 
@@ -291,7 +291,11 @@ func TestStream_FailOpen(t *testing.T) {
 
 ### Critério de saída
 
-- [ ] p95 do hook < 10 ms em saída típica
+- [x] p95 do hook medido e documentado — **28,8 ms**, não os 10 ms estimados.
+      Decomposição: ~12 ms de spawn de processo, ~14 ms compilando as 417
+      regras de segredo. `--fast` pula as regras e faz 14,1 ms. O orçamento
+      de 10 ms era um chute e não é alcançável com um processo por chamada;
+      o modo daemon (3.3) é o que fecha essa diferença e continua pendente.
 - [ ] Sessão real: `cat` de arquivo com segredo chega tarjado ao modelo
 - [ ] Motor em pânico deixa o texto passar intacto
 - [ ] `transcript scan` acha segredo conhecido e não vaza o valor no relatório

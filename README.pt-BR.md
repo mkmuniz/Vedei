@@ -96,7 +96,7 @@ Registros completos em [`docs/adr/`](docs/adr/).
 | M0 | Fundação | ✅ |
 | M1 | Detectores BR + validação offline | ✅ |
 | M2 | Motor de segredos via betterleaks | ✅ |
-| M3 | **MVP — superfície de IA** | ⬜ |
+| M3 | **MVP — superfície de IA** | 🚧 |
 | M4 | CLI, CI/CD, SARIF, scrub de transcript | ⬜ |
 | M5 | Corpus multilíngue + calibração pt-BR | ⬜ |
 | M6 | SDK de runtime | ⬜ |
