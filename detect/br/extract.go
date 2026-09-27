@@ -305,14 +305,43 @@ func ExtractPixKeys(s string) []Match {
 	return out
 }
 
+// pixContextWords are the words that turn an ambiguous string into evidence
+// of a Pix key.
+var pixContextWords = []string{"pix", "chave", "recebedor", "favorecido", "transferencia", "transferência"}
+
+// hasPixContext reports whether a line mentions Pix near the match.
+//
+// This exists because of what the first real run showed. Auditing 29 agent
+// transcripts produced 17,823 findings, of which 17,690 were "Pix keys" that
+// were actually UUIDs: session ids, message ids, tool-call ids. A UUID v4 is
+// a valid EVP key by format and almost never one in practice, and the same
+// is true of an email address. Reporting them all is not thorough, it is
+// noise that makes the tool unusable.
+//
+// A phone key is exempt: "+55" followed by a valid area code and eight or
+// nine digits is specific enough to stand alone.
+func hasPixContext(line string) bool {
+	lower := strings.ToLower(line)
+	for _, w := range pixContextWords {
+		if strings.Contains(lower, w) {
+			return true
+		}
+	}
+	return false
+}
+
 func appendPixMatches(out []Match, line string, offset int) []Match {
-	if strings.IndexByte(line, '@') >= 0 {
+	// Email and EVP shapes are ambiguous on their own and need context.
+	// Checking it once is cheaper than running either pattern.
+	ambiguousOK := hasPixContext(line)
+
+	if ambiguousOK && strings.IndexByte(line, '@') >= 0 {
 		out = collect(out, pixEmailRe, line, offset)
 	}
 	if strings.Contains(line, "+55") {
 		out = collect(out, pixPhoneRe, line, offset)
 	}
-	if mayHoldUUID(line) {
+	if ambiguousOK && mayHoldUUID(line) {
 		out = collect(out, pixEVPRe, line, offset)
 	}
 	return out

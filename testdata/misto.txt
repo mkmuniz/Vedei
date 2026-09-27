@@ -3,7 +3,7 @@ cpf_valido:    529.982.247-25
 cpf_invalido:  529.982.247-26
 cnpj_alfanum:  12.ABC.345/01DE-35
 cartao:        4539 5787 6362 1486
-pix_email:     joao@exemplo.com.br
+chave pix:     joao@exemplo.com.br
 e2eid_valido:  E60701190202609261430abc12345678
 e2eid_forjado: E99999999202609261430abc12345678
 # o segredo e injetado em tempo de execucao pelo teste; ver engine/engine_test.go

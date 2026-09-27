@@ -139,11 +139,16 @@ func TestExtract_EmptyAndPlainText(t *testing.T) {
 
 func TestExtractPixKeys(t *testing.T) {
 	cases := map[string]bool{
-		"pague para joao@exemplo.com.br hoje":              true,
-		"telefone +5511987654321":                          true,
-		"chave 123e4567-e89b-42d3-a456-426614174000":       true,
-		"nao e chave 123e4567-e89b-12d3-a456-426614174000": false,
-		"texto sem chave nenhuma":                          false,
+		// Email and EVP shapes need Pix context; on their own they are an
+		// address and an identifier.
+		"chave pix joao@exemplo.com.br":                   true,
+		"pague para joao@exemplo.com.br hoje":             false,
+		"chave 123e4567-e89b-42d3-a456-426614174000":      true,
+		"sessionId: 123e4567-e89b-42d3-a456-426614174000": false,
+		"chave pix 123e4567-e89b-12d3-a456-426614174000":  false, // not a v4 UUID
+		// A phone key stands alone: "+55" plus a valid area code is specific.
+		"telefone +5511987654321": true,
+		"texto sem chave nenhuma": false,
 	}
 	for text, want := range cases {
 		got := len(ExtractPixKeys(text)) > 0
@@ -299,6 +304,34 @@ func TestMayHoldUUID_GateIsTight(t *testing.T) {
 	for _, s := range open {
 		if !mayHoldUUID(s) {
 			t.Errorf("gate closed on a real UUID: %q", s)
+		}
+	}
+}
+
+// The regression that mattered: auditing 29 real agent transcripts produced
+// 17,690 "Pix keys" that were internal UUIDs. A UUID is a valid EVP key by
+// format and essentially never one in practice.
+func TestExtractPixKeys_BareUUIDIsNotAPixKey(t *testing.T) {
+	noise := []string{
+		`{"sessionId":"33015dee-d5ac-42a1-a12b-765baa1436b1"}`,
+		`  "uuid": "123e4567-e89b-42d3-a456-426614174000",`,
+		"tool_use_id: 7c9e6679-7425-40de-944b-e07fc1f90ae7",
+		"user joao@exemplo.com.br logged in",
+		"contato: suporte@empresa.com.br",
+	}
+	for _, s := range noise {
+		if ms := ExtractPixKeys(s); len(ms) != 0 {
+			t.Errorf("reported a Pix key without context in %q: %+v", s, ms)
+		}
+	}
+
+	real := []string{
+		"chave pix: 123e4567-e89b-42d3-a456-426614174000",
+		"a chave do recebedor e joao@exemplo.com.br",
+	}
+	for _, s := range real {
+		if ms := ExtractPixKeys(s); len(ms) == 0 {
+			t.Errorf("missed a Pix key with context in %q", s)
 		}
 	}
 }
