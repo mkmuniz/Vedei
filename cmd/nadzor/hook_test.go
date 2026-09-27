@@ -2,11 +2,13 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"os"
 	"os/exec"
 	"strings"
 	"testing"
+	"time"
 )
 
 const testCPF = "529.982.247-25"
@@ -23,7 +25,10 @@ func runHookBinary(t *testing.T, input string, args ...string) string {
 		t.Skip("binary not built; run make build")
 	}
 
-	cmd := exec.Command(bin, append([]string{"hook"}, args...)...) //nolint:gosec // fixed path
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, bin, append([]string{"hook"}, args...)...) //nolint:gosec // fixed path
 	cmd.Stdin = strings.NewReader(input)
 	var out bytes.Buffer
 	cmd.Stdout = &out
