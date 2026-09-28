@@ -395,7 +395,7 @@ func (s *Scanner) scanFile(ctx context.Context, p, reported string, size int64) 
 		return nil, 0, nil
 	}
 
-	content, err := os.ReadFile(p) //nolint:gosec // the caller names the tree
+	content, err := os.ReadFile(p) //#nosec G304 -- a file inside the tree the caller asked to scan; symlinks are skipped unless --follow-symlinks says otherwise
 	if err != nil {
 		return nil, 0, fmt.Errorf("scan: %w", err)
 	}

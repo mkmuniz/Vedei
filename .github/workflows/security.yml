@@ -1,0 +1,98 @@
+# The security tooling, running on a schedule rather than only when somebody
+# remembers. SECURITY.md claimed govulncheck was part of CI before this file
+# existed, which is the kind of claim a security policy should not get wrong.
+name: security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # Weekly, because a new advisory against an unchanged dependency is the
+    # case a push-triggered scan never catches.
+    - cron: "23 5 * * 2"
+
+permissions:
+  contents: read
+
+env:
+  GO_VERSION: "1.27"
+
+jobs:
+  govulncheck:
+    name: govulncheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      # Reachability, not presence: it reports a dependency's vulnerability only
+      # when a call path in this binary actually reaches it. That distinction is
+      # why this is the one that gates the build.
+      - run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+
+  gosec:
+    name: gosec
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      # golangci-lint runs gosec too, but this run adds the two flags that
+      # matter: every suppression must name its rule and carry a reason. A
+      # bare "#nosec" is how a real finding gets silenced by someone in a hurry
+      # and never looked at again.
+      - run: make sast
+
+  trivy:
+    name: trivy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Scan the dependency manifest and the tree
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scanners: vuln,secret,misconfig
+          format: sarif
+          output: trivy.sarif
+          severity: MEDIUM,HIGH,CRITICAL
+          exit-code: "0"
+
+      - name: Upload to Code Scanning
+        uses: github/codeql-action/upload-sarif@v3
+        if: ${{ !cancelled() && github.event.pull_request.head.repo.fork != true }}
+        with:
+          sarif_file: trivy.sarif
+          category: trivy
+
+  fuzz:
+    name: fuzz
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      # A short run per target on every push, a long one on the weekly
+      # schedule. The short run is a regression check against the committed
+      # corpus; the long one is the part that finds something new.
+      - name: Fuzz
+        run: make fuzz FUZZTIME=${{ github.event_name == 'schedule' && '300s' || '20s' }}
+
+      # A crash writes its input to testdata/fuzz/. Keeping it is the whole
+      # point: it becomes a seed, and the next run starts from it.
+      - name: Upload any crashing input
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-crashers
+          path: "**/testdata/fuzz/**"
+          if-no-files-found: ignore

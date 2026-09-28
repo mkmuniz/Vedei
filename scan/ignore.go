@@ -105,7 +105,7 @@ func ParseIgnore(source, dir string, r io.Reader) (*Ignore, error) {
 // it is an error, because a file that exists and cannot be read may be
 // silencing a finding the caller needs.
 func LoadIgnore(filePath, dir string) (*Ignore, error) {
-	f, err := os.Open(filePath) //nolint:gosec // the caller names the file
+	f, err := os.Open(filePath) //#nosec G304 -- .gitignore or .nadzorignore inside the tree the caller asked to scan
 	if os.IsNotExist(err) {
 		return nil, nil
 	}

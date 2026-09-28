@@ -105,7 +105,7 @@ func viaFallback(input []byte, override string, timeout time.Duration) []byte {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, bin, args...) //nolint:gosec // resolved from the flag or this binary's own directory
+	cmd := exec.CommandContext(ctx, bin, args...) //#nosec G204 -- resolved from --fallback, NADZOR_BIN, or a nadzor beside this binary; anyone who can set those can already run anything as this user
 	cmd.Stdin = bytes.NewReader(input)
 	cmd.Stderr = os.Stderr
 	out, err := cmd.Output()

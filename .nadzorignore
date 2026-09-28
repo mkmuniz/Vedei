@@ -62,6 +62,16 @@ e76125acd87d8371c7912b685aa7d9a7  # ****@*******.***.br - 4x, detect/br/extract_
 # Titulo de eleitor test vector.
 9ead811e4aec03e81eb2b1976d5d64cb  # **** **** **54 - 3x, detect/br/extract.go and 1 more
 
+# --- pix-key, added by the security audit ---
+# Phone numbers and a UUID that a fuzzer turned up, now fixtures. The phone one
+# is the case that matters: every Brazilian number in E.164 form begins with 55,
+# which is inside the Mastercard issuer range 51-55, so a +55 number whose
+# digits happen to satisfy Luhn was being reported as a credit card.
+007c91df5488278b2c7164c16d4f04d4  # +***********75 - the number the fuzzer minimized to
+a83871a7916f6b9c44907082aa289cfc  # +***********21 - a second phone in the same shape
+d554cea51a6155fd70c74664b448aff2  # +***********94 - a third
+9ee2bb2c7f2a591ab50bb3070faa1a6d  # a UUID v4 Pix key, in the overlap test
+
 # Nothing is ignored by path, on purpose. Silencing *_test.go wholesale would
 # also silence a credential genuinely committed into a test, which is a place
 # credentials genuinely end up. Every entry above is one value, named.

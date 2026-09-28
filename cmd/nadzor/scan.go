@@ -142,7 +142,7 @@ func output(path string) (w *os.File, closeFn func(), err error) {
 	if path == "" {
 		return os.Stdout, func() {}, nil
 	}
-	f, err := os.Create(path) //nolint:gosec // the caller names the file
+	f, err := os.Create(path) //#nosec G304 -- --out names the report file; writing where the caller asked is the feature
 	if err != nil {
 		return nil, nil, fmt.Errorf("creating %s: %w", path, err)
 	}

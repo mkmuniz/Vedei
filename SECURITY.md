@@ -59,7 +59,13 @@ from the secrets engine. M5 measures and corrects this.
 
 **124 transitive dependencies.** Two direct ones, of which betterleaks
 brings the rest, including cloud SDKs it uses for credential validation that
-nadzor does not enable. Running `govulncheck` is part of CI for that reason.
+nadzor does not enable. `govulncheck` runs on every push and weekly, in
+`.github/workflows/security.yml`, alongside `gosec`, Trivy and the fuzzers.
+
+Weekly matters as much as per-push: a new advisory against a dependency that
+did not change is the case a push-triggered scan never sees.
+
+Run the same checks locally with `make security` and `make fuzz`.
 
 **A structurally valid document may still be fabricated.** nadzor validates
 check digits, never identity, and never will (ADR-002). A generated CPF in a
