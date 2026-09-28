@@ -47,11 +47,29 @@ var patterns = []struct {
 	{KindCNPJ, regexp.MustCompile(`[0-9A-Za-z]{2}\.?[0-9A-Za-z]{3}\.?[0-9A-Za-z]{3}/?[0-9A-Za-z]{4}-?[0-9]{2}`)},
 	{KindCNS, regexp.MustCompile(`[1-2789][0-9]{2}[\s.]?[0-9]{4}[\s.]?[0-9]{4}[\s.]?[0-9]{4}`)},
 	{KindTitulo, regexp.MustCompile(`[0-9]{4}[\s.]?[0-9]{4}[\s.]?[0-9]{4}`)},
-	{KindPAN, regexp.MustCompile(`[0-9]{4}[\s.-]?[0-9]{4}[\s.-]?[0-9]{4}[\s.-]?[0-9]{1,7}`)},
+	{KindPAN, panRe},
 	{KindCPF, regexp.MustCompile(`[0-9]{3}\.?[0-9]{3}\.?[0-9]{3}[-.]?[0-9]{2}`)},
 	{KindPIS, regexp.MustCompile(`[0-9]{3}\.?[0-9]{5}\.?[0-9]{2}-?[0-9]`)},
 	{KindCNH, regexp.MustCompile(`[0-9]{11}`)},
 }
+
+// panRe matches a card number the way one is actually written: unbroken, or in
+// groups of four with a single separator used consistently.
+//
+// The earlier form allowed each separator independently, which let sixteen
+// digits straddle a hyphen at any position. A real run showed the cost:
+// "11111111-2222-3333-4444-555555555555" — a UUID — yielded card-pan
+// "4444-555555555555", at high confidence, because those sixteen digits happen
+// to pass Luhn. On the agent hook that is the worst kind of error, since
+// redacting an identifier the agent needed breaks the task it was doing.
+//
+// A tab counts as a separator because card numbers do arrive in TSV columns,
+// but \s does not, because a number split across two lines is not one number.
+var panRe = regexp.MustCompile(
+	`[0-9]{4}[ \t][0-9]{4}[ \t][0-9]{4}[ \t][0-9]{1,7}` +
+		`|[0-9]{4}-[0-9]{4}-[0-9]{4}-[0-9]{1,7}` +
+		`|[0-9]{4}\.[0-9]{4}\.[0-9]{4}\.[0-9]{1,7}` +
+		`|[0-9]{13,19}`)
 
 // isBoundary reports whether b can sit next to a document without the match
 // being part of a longer token. A digit or letter next door means the run is

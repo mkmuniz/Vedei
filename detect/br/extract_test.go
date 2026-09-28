@@ -103,9 +103,51 @@ func TestExtract_FindsCNPJIncludingAlphanumeric(t *testing.T) {
 }
 
 func TestExtract_FindsCardPAN(t *testing.T) {
-	ms := Extract("cartao 4539 5787 6362 1486 fim")
-	if len(ms) == 0 || ms[0].Kind != KindPAN {
-		t.Errorf("PAN not found: %+v", kindsOf(ms))
+	// The forms a card number is actually written in, all Luhn-valid.
+	for _, text := range []string{
+		"cartao 4539 5787 6362 1486 fim",
+		"cartao 4539-5787-6362-1486 fim",
+		"cartao 4539.5787.6362.1486 fim",
+		"cartao 4539578763621486 fim",
+		"4539\t5787\t6362\t1486",
+	} {
+		ms := Extract(text)
+		if len(ms) == 0 || ms[0].Kind != KindPAN {
+			t.Errorf("PAN not found in %q: %+v", text, kindsOf(ms))
+		}
+	}
+}
+
+// A UUID is not a card number, and the sixteen digits inside one can pass Luhn
+// by chance. This came from a real hook run, where the value was redacted at
+// high confidence — on that path a false positive breaks the agent's task.
+func TestExtract_UUIDIsNotACardPAN(t *testing.T) {
+	for _, text := range []string{
+		"11111111-2222-3333-4444-555555555555",
+		"recebedor chave 11111111-2222-3333-4444-555555555555",
+		"session 2ea4b13f-8fc1-4e1b-9a2c-7d5f6e8a9b01",
+	} {
+		for _, m := range Extract(text) {
+			if m.Kind == KindPAN {
+				t.Errorf("%q yielded card-pan %q", text, m.Value)
+			}
+		}
+	}
+}
+
+// Grouping has to be consistent: a run of sixteen digits split at one
+// arbitrary point is not how any card is written.
+func TestExtract_RejectsInconsistentPANGrouping(t *testing.T) {
+	for _, text := range []string{
+		"4539-578763621486",
+		"4539 5787-6362 1486",
+		"4539.5787 6362.1486",
+	} {
+		for _, m := range Extract(text) {
+			if m.Kind == KindPAN {
+				t.Errorf("%q yielded card-pan %q", text, m.Value)
+			}
+		}
 	}
 }
 
