@@ -1,8 +1,14 @@
-# Agent hooks
+# Hooks
 
-These keep secrets and Brazilian personal data out of a coding agent's
-context. When the agent runs `cat .env`, the output is redacted before the
-model ever sees it.
+Two families, for two different moments.
+
+**Agent hooks** keep secrets and Brazilian personal data out of a coding
+agent's context. When the agent runs `cat .env`, the output is redacted before
+the model ever sees it. That is the rest of this file.
+
+**[Git hooks](git/)** stop a credential from being committed or pushed.
+`pre-commit` scans the index on your machine; `pre-receive` scans the range
+being pushed, on the server.
 
 ## Why this is needed
 

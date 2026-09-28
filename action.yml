@@ -1,0 +1,182 @@
+# The published action lives at the repository root so it can be used as
+# mkmuniz/nadzor@v1 rather than mkmuniz/nadzor/.github/actions/nadzor@v1.
+name: nadzor
+description: >-
+  Find Brazilian sensitive data and leaked credentials, validated offline with
+  check digits, and upload the result to GitHub Code Scanning.
+author: mkmuniz
+branding:
+  icon: eye
+  color: purple
+
+inputs:
+  path:
+    description: File or directory to scan.
+    required: false
+    default: "."
+  mode:
+    description: >-
+      What to scan. "path" walks the tree, "diff" scans only what changed in the
+      pull request or push, and "history" walks every reachable blob.
+      Prefer "diff" on pull requests: re-scanning the whole tree on every push is
+      how a scanner becomes the slowest step in the pipeline.
+    required: false
+    default: path
+  base:
+    description: Base revision for mode=diff. Defaults to the pull request base, or the push before.
+    required: false
+    default: ""
+  head:
+    description: Head revision for mode=diff.
+    required: false
+    default: HEAD
+  format:
+    description: Report format written to the report file (sarif, json, jsonl or table).
+    required: false
+    default: sarif
+  report:
+    description: Where to write the report.
+    required: false
+    default: nadzor.sarif
+  upload-sarif:
+    description: >-
+      Upload the SARIF to Code Scanning. Needs security-events write permission.
+      Set to false on a fork, where that token is read-only.
+    required: false
+    default: "true"
+  min-confidence:
+    description: Report only findings at this confidence or above (low, medium, high).
+    required: false
+    default: low
+  fail-on-findings:
+    description: >-
+      Fail the step when something is found. A scan that could not run fails
+      regardless — a permission error must never read as a clean run.
+    required: false
+    default: "true"
+  version:
+    description: >-
+      nadzor version to install, or "latest". Leave empty to use a nadzor already
+      on PATH — which is how this repository scans itself with the code under
+      review rather than with the published release, and how anyone who installs
+      nadzor another way (Homebrew, a pinned binary) skips the install step.
+    required: false
+    default: latest
+
+outputs:
+  findings:
+    description: How many findings the scan reported.
+    value: ${{ steps.scan.outputs.findings }}
+  report:
+    description: Path to the written report.
+    value: ${{ steps.scan.outputs.report }}
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Go
+      if: ${{ inputs.version != '' }}
+      uses: actions/setup-go@v6
+      with:
+        go-version: "1.27"
+        cache: false
+
+    - name: Install nadzor
+      if: ${{ inputs.version != '' }}
+      shell: bash
+      run: go install github.com/mkmuniz/nadzor/cmd/nadzor@${{ inputs.version }}
+
+    - name: Check nadzor is available
+      shell: bash
+      run: |
+        if ! command -v nadzor >/dev/null 2>&1; then
+          echo "::error::nadzor is not on PATH. Either set the 'version' input, or install it in an earlier step." >&2
+          exit 1
+        fi
+        nadzor --version
+
+    - name: Scan
+      id: scan
+      shell: bash
+      env:
+        MODE: ${{ inputs.mode }}
+        SCAN_PATH: ${{ inputs.path }}
+        BASE: ${{ inputs.base }}
+        HEAD: ${{ inputs.head }}
+        FORMAT: ${{ inputs.format }}
+        REPORT: ${{ inputs.report }}
+        MIN_CONFIDENCE: ${{ inputs.min-confidence }}
+        FAIL_ON_FINDINGS: ${{ inputs.fail-on-findings }}
+        PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        PUSH_BEFORE: ${{ github.event.before }}
+      run: |
+        set -uo pipefail
+
+        args=(--format "$FORMAT" --out "$REPORT" --min-confidence "$MIN_CONFIDENCE")
+
+        case "$MODE" in
+          path)
+            nadzor scan "$SCAN_PATH" "${args[@]}"
+            ;;
+          diff)
+            base="$BASE"
+            if [ -z "$base" ]; then
+              # On a pull request the base sha is exact. On a push, github.event.before
+              # is the previous head, which is all zeros for the first push to a branch.
+              base="${PR_BASE_SHA:-}"
+              [ -z "$base" ] && base="${PUSH_BEFORE:-}"
+            fi
+            if [ -z "$base" ] || [ "$base" = "0000000000000000000000000000000000000000" ]; then
+              echo "nadzor: no usable base revision, scanning the tree instead" >&2
+              nadzor scan "$SCAN_PATH" "${args[@]}"
+            else
+              nadzor diff --base "$base" --head "$HEAD" "${args[@]}"
+            fi
+            ;;
+          history)
+            nadzor git "$SCAN_PATH" "${args[@]}"
+            ;;
+          *)
+            echo "nadzor: unknown mode '$MODE', want path, diff or history" >&2
+            exit 1
+            ;;
+        esac
+        code=$?
+
+        echo "report=$REPORT" >> "$GITHUB_OUTPUT"
+
+        # Exit codes are distinct on purpose: 0 clean, 3 findings, 1 the scan
+        # itself failed. Collapsing 1 into 3 is how a permission error becomes a
+        # green build, so it is never treated as a finding.
+        case "$code" in
+          0)
+            echo "findings=0" >> "$GITHUB_OUTPUT"
+            ;;
+          3)
+            count=0
+            if [ "$FORMAT" = "sarif" ] && [ -f "$REPORT" ]; then
+              count=$(python3 -c 'import json,sys; print(len(json.load(open(sys.argv[1]))["runs"][0]["results"]))' "$REPORT" 2>/dev/null || echo 0)
+            fi
+            echo "findings=$count" >> "$GITHUB_OUTPUT"
+            echo "::warning::nadzor found $count item(s); see the Security tab" >&2
+            ;;
+          *)
+            echo "::error::nadzor could not complete the scan (exit $code)" >&2
+            exit "$code"
+            ;;
+        esac
+
+        if [ "$code" = "3" ] && [ "$FAIL_ON_FINDINGS" = "true" ]; then
+          exit 1
+        fi
+        exit 0
+
+    - name: Upload to Code Scanning
+      # Runs even when the scan step failed, so the findings reach the Security
+      # tab rather than only the log. It is skipped when the scan could not run:
+      # uploading a partial report as a successful one is worse than no report.
+      if: ${{ inputs.upload-sarif == 'true' && inputs.format == 'sarif' && !cancelled() }}
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: ${{ inputs.report }}
+        category: nadzor

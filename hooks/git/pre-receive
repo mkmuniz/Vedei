@@ -1,0 +1,61 @@
+#!/bin/sh
+# nadzor pre-receive hook: refuse a push that introduces a credential.
+#
+# Install on the server, in the bare repository:
+#   cp pre-receive /path/to/repo.git/hooks/pre-receive && chmod +x ...
+#
+# This is the last place a secret can be stopped before it is in history that
+# other people have fetched. After that, rotation is the only remedy — rewriting
+# the history does not un-share what was already cloned.
+#
+# It scans the range being pushed, not the whole history. A server hook runs
+# while the client waits, so walking every branch on every push would make the
+# push time grow with the age of the repository.
+
+set -u
+
+if ! command -v nadzor >/dev/null 2>&1; then
+    echo "nadzor: not on PATH on the server; the push was not scanned" >&2
+    exit 0
+fi
+
+zero="0000000000000000000000000000000000000000"
+status=0
+
+while read -r old new _ref; do
+    # A branch being deleted introduces nothing.
+    [ "$new" = "$zero" ] && continue
+
+    if [ "$old" = "$zero" ]; then
+        # A new branch: there is no base to diff against, so every blob it
+        # carries that is not already reachable is new to us.
+        nadzor git . --rev "$new" --min-confidence "${NADZOR_MIN_CONFIDENCE:-medium}" || status=$?
+    else
+        nadzor diff --base "$old" --head "$new" --min-confidence "${NADZOR_MIN_CONFIDENCE:-medium}" || status=$?
+    fi
+done
+
+case "$status" in
+    0)
+        exit 0
+        ;;
+    3)
+        cat >&2 <<'MSG'
+
+nadzor: the push was rejected because it introduces the values above.
+
+  Rotate the credential. It should be treated as compromised from the moment it
+  was written down, not from the moment it is pushed.
+
+  Then rewrite the commits that carry it — removing it in a new commit leaves the
+  blob reachable, and "nadzor git" will still find it.
+MSG
+        exit 1
+        ;;
+    *)
+        echo "" >&2
+        echo "nadzor: the scan failed on the server (exit $status); the push was rejected" >&2
+        echo "  because nothing was actually checked." >&2
+        exit 1
+        ;;
+esac
