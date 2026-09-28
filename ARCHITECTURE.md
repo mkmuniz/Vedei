@@ -149,7 +149,7 @@ Cada superfície tem um limite diferente. Ultrapassar o limite é bug, não lent
 |---|---|---|
 | Hook de agente | **< 10 ms** p95 por chamada de ferramenta — medido: **8,4 ms** com daemon | roda a cada tool call; 200 ms torna o agente inutilizável |
 | Middleware de log | **< 1 µs** quando não há achado | roda a cada linha de log de produção |
-| CLI / CI | throughput, não latência | alvo: > 50 MB/s em varredura de diretório |
+| CLI / CI | throughput, não latência | alvo: > 50 MB/s — medido: 218 MB/s em processo, 72 MB/s de relógio de parede numa execução da CLI |
 | Coletor otel | amostrável | inspecionar 100% do log de produção tem custo; deve ser configurável |
 
 Consequência de projeto: config é **pré-compilada uma vez** e reaproveitada. Recarregar e recompilar regra por invocação custa ~14 ms — é o bug conhecido do betterleaks (issue #343) e não deve ser repetido.
@@ -219,14 +219,15 @@ nadzor/
 │   └── secrets/           # implementa Engine embrulhando betterleaks
 │
 ├── redact/                # tarja preservando formato
-├── report/                # JSON, JSONL, SARIF
+├── scan/                  # caminhador, matcher de gitignore, historico git (M4)
+├── report/                # tabela, JSON, JSONL, SARIF                       (M4)
 ├── fingerprint/           # SHA-256 estavel do achado
 │
 ├── stream/                # stdin -> stdout            (M3)
 ├── daemon/                # servidor e cliente do socket Unix (M3)
 ├── internal/hookevent/    # parse/rewrite do evento de hook (M3)
 ├── transcript/            # leitor de *.jsonl de agente (M3/M4)
-├── hooks/                 # Claude Code, Codex, launchd, systemd (M3)
+├── hooks/                 # agente, git, launchd, systemd    (M3/M4)
 ├── sdk/{go,node,python}/  #                             (M6)
 ├── otel/                  #                             (M8)
 ├── ai/                    # triagem, geracao de regra, MCP (M7)

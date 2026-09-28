@@ -375,12 +375,48 @@ nadzor scan /sem/permissao/;  [ $? -eq 1 ]
 
 ### Critério de saída
 
-- [ ] A Action roda no próprio repositório e publica na aba Security
-- [ ] Os três códigos de saída conferem
-- [ ] `scrub` não corrompe JSONL; backup verificado byte a byte
-- [ ] Varredura de diretório > 50 MB/s
+- [x] A Action roda no próprio repositório e publica na aba Security —
+      `.github/workflows/nadzor.yml`, com `mode: diff` em PR e `mode: history`
+      semanal. Ela usa o binário construído do checkout, não o publicado:
+      escanear a si mesmo com o release do mês passado prova menos do que parece.
+- [x] Os três códigos de saída conferem, e `1` tem precedência sobre `3` —
+      "achamos duas coisas" engana quando a varredura não terminou.
+- [x] `scrub` não corrompe JSONL; backup verificado por hash, não por tamanho
+- [x] Varredura de diretório > 50 MB/s — medido em quatro formas, porque
+      respondem a perguntas diferentes (9,8 MB em 300 arquivos, Apple M4):
+      **218 MB/s** quente e em processo com os dois motores, **246 MB/s** só
+      dados BR, **99 MB/s** numa execução da CLI pelo tempo que ela mesma
+      reporta, e **72 MB/s** de relógio de parede (~137 ms). A diferença entre a
+      primeira e a terceira é custo único que o benchmark amortiza e o usuário
+      de linha de comando paga sempre: compilar 417 regras e carregar 26 MB de
+      binário. Citar só os 218 seria citar o número que ninguém experimenta.
+      Benchmark em `scan/bench_test.go`, reportando sem assertar.
+- [x] `.nadzorignore` no próprio repo: 71 achados silenciados, 21 fingerprints,
+      cada um com o motivo escrito. Nada silenciado por caminho, de propósito.
+
+**Comentário inline em PR** (item 5) **não foi implementado, e não deve ser.**
+O upload de SARIF para o Code Scanning já anota o diff do PR, com deduplicação,
+estado de alerta e histórico — um bot de comentário próprio seria uma segunda
+fonte de verdade pior que a primeira. Fica registrado como decisão, não como
+pendência.
 
 **Risco:** escopo. Resistir a adicionar fontes novas (S3, GitLab, Hugging Face) — o betterleaks já faz e você herda.
+
+**O que rodar no próprio repositório encontrou**
+
+1. **Timestamp virando número de cartão.** `20240915155400` — o timestamp dentro
+   de uma pseudo-versão do Go, no `go.mod` — passou por Luhn e saiu como
+   `card-pan` com confiança alta. Luhn passa em ~1 de cada 10 sequências
+   aleatórias, e `YYYYMMDDHHMMSS` está em pseudo-versão de módulo, log, nome de
+   arquivo e nome de migration. Agora uma sequência **sem separador** também
+   precisa começar numa faixa de emissor conhecida; nenhuma bandeira emite número
+   começando em 19, 20 ou 21. Quem escreve em grupos de quatro está isento — o
+   formato é a evidência, ninguém escreve timestamp como `2024 0915 1554 00`.
+2. **`.nadzorignore` só valia para fingerprint**, não para o caminhamento, então
+   uma regra de caminho lá não pulava nada.
+3. **Caminhos absolutos no relatório.** O SARIF do GitHub casa o caminho contra a
+   árvore do repositório, então um caminho absoluto põe o alerta em arquivo
+   nenhum. O scanner reporta relativo à raiz por isso, não por estética.
 
 ---
 
