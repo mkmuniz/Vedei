@@ -228,6 +228,42 @@ func overlaps(taken []bool, start, end int) bool {
 }
 
 // validate dispatches a candidate to the validator for its kind.
+// validatePAN accepts a card number, and rejects the thing that looks most like
+// one and is not: a timestamp.
+//
+// Luhn passes on a random digit run roughly one time in ten, and unbroken runs
+// of 13 to 19 digits are everywhere. Scanning nadzor's own repository found
+// "20240915155400" in go.mod — the timestamp inside a Go pseudo-version —
+// reported as a card at high confidence. YYYYMMDDHHMMSS appears in module
+// versions, log lines, filenames and migration names, so this is a whole class
+// of false positive rather than one unlucky number.
+//
+// So an unbroken run must also begin with a recognized issuer range. Every real
+// card does, and a timestamp does not: no network issues numbers starting 19, 20
+// or 21. A number written in groups of four is exempt, because that formatting
+// is itself the evidence — nobody writes a timestamp as "2024 0915 1554 00".
+func validatePAN(v string) bool {
+	if !ValidateLuhn(v) {
+		return false
+	}
+	if hasGroupSeparators(v) {
+		return true
+	}
+	return DetectCardBrand(v) != BrandUnknown
+}
+
+// hasGroupSeparators reports whether the value was written in groups rather than
+// as one unbroken run.
+func hasGroupSeparators(v string) bool {
+	for i := 0; i < len(v); i++ {
+		switch v[i] {
+		case ' ', '\t', '-', '.':
+			return true
+		}
+	}
+	return false
+}
+
 func validate(k Kind, v string) bool {
 	switch k {
 	case KindCPF:
@@ -245,7 +281,7 @@ func validate(k Kind, v string) bool {
 	case KindCNS:
 		return ValidateCNS(v)
 	case KindPAN:
-		return ValidateLuhn(v)
+		return validatePAN(v)
 	case KindPixKey:
 		return ValidateChavePix(v)
 	case KindE2EID:

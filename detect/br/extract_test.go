@@ -377,3 +377,64 @@ func TestExtractPixKeys_BareUUIDIsNotAPixKey(t *testing.T) {
 		}
 	}
 }
+
+// A timestamp is the thing that looks most like a card number and is not. Luhn
+// passes on a random digit run about one time in ten, and YYYYMMDDHHMMSS is
+// everywhere: Go pseudo-versions, log lines, filenames, migration names.
+//
+// Every one of these passes Luhn. Scanning nadzor's own repository is where the
+// first two came from — go.mod, reported at high confidence.
+func TestExtract_TimestampIsNotACardPAN(t *testing.T) {
+	for _, text := range []string{
+		"github.com/shurcooL/graphql v0.0.0-20240915155400-7ee5256398cf",
+		"go4.org v0.0.0-20260112195520-a5071408f32f",
+		"migration_20240915155400_add_users.sql",
+		"20240915155400",
+	} {
+		// Guard the premise: if Luhn stopped passing, this test would be proving
+		// nothing.
+		if !ValidateLuhn(text) {
+			continue
+		}
+		for _, m := range Extract(text) {
+			if m.Kind == KindPAN {
+				t.Errorf("%q yielded card-pan %q", text, m.Value)
+			}
+		}
+	}
+}
+
+// The rule that replaces "Luhn is enough": an unbroken run must also start in a
+// recognized issuer range, because no network issues numbers starting 19 or 20.
+func TestExtract_UnbrokenPANNeedsAnIssuerRange(t *testing.T) {
+	// A Visa test number, Luhn-valid, issuer range 4.
+	if ms := Extract("cartao 4539578763621486"); len(ms) == 0 || ms[0].Kind != KindPAN {
+		t.Errorf("a Visa number was not found: %+v", kindsOf(ms))
+	}
+
+	// Luhn-valid, but 2024… is not an issuer range.
+	for _, m := range Extract("2024091515540061") {
+		if m.Kind == KindPAN {
+			t.Errorf("an unbroken run outside every issuer range was accepted: %q", m.Value)
+		}
+	}
+}
+
+// Grouping is exempt from the issuer-range rule, because the formatting is the
+// evidence: nobody writes a timestamp as "2024 0915 1554 00".
+func TestExtract_GroupedPANIsAcceptedWithoutAnIssuerRange(t *testing.T) {
+	// Luhn-valid and outside every issuer range, but written as a card.
+	const grouped = "2024 0915 1554 0061"
+	if !ValidateLuhn(grouped) {
+		t.Skip("the fixture no longer passes Luhn")
+	}
+	found := false
+	for _, m := range Extract("cartao " + grouped) {
+		if m.Kind == KindPAN {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("a grouped number was rejected for its issuer range")
+	}
+}
