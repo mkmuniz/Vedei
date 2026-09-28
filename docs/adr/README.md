@@ -10,3 +10,4 @@ A decision is superseded, never edited.
 | [003](003-no-value-to-model.md) | A detected value never reaches a language model | accepted |
 | [004](004-model-output-is-signal.md) | Model output is a signal, never a filter | accepted |
 | [005](005-fail-open-fail-closed.md) | Fail open on redaction, fail closed on reporting | accepted |
+| [006](006-daemon-and-thin-client.md) | A daemon holds the compiled rules, and the hook client stays small | accepted |

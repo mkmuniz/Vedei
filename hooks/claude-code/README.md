@@ -4,6 +4,8 @@
 
 ```bash
 go install github.com/mkmuniz/nadzor/cmd/nadzor@latest
+go install github.com/mkmuniz/nadzor/cmd/nadzor-hook@latest
+nadzor daemon &            # or install the service file in ../launchd/
 ```
 
 Add to `~/.claude/settings.json`:
@@ -15,7 +17,7 @@ Add to `~/.claude/settings.json`:
       {
         "matcher": "Bash|Read|Grep|Glob",
         "hooks": [
-          { "type": "command", "command": "nadzor hook", "timeout": 5 }
+          { "type": "command", "command": "nadzor-hook", "timeout": 5 }
         ]
       }
     ]
@@ -25,37 +27,50 @@ Add to `~/.claude/settings.json`:
 
 Start a new session. Nothing else changes.
 
+If you would rather not run a daemon, use `"command": "nadzor hook"` instead.
+That is slower — see the table — but it is a single binary and no service.
+
 ## Verify
 
 ```bash
-echo '{"tool_response":"cpf 529.982.247-25"}' | nadzor hook
+echo '{"tool_response":"cpf 529.982.247-25"}' | nadzor-hook
 ```
 
 ```json
 {"tool_response":"cpf ***.***.***-25 [nadzor: cpf redacted]"}
 ```
 
-Then, in a real session: put a valid CPF in a file and ask the agent to read
-it. The model receives it masked, and your terminal shows what was withheld.
+Then, in a real session: put a valid CPF and a credential in a file and ask
+the agent to read it. The model receives them masked, and your terminal shows
+what was withheld:
+
+```
+nadzor: redacted stripe-access-token
+nadzor: redacted cpf
+```
+
+The report goes to stderr, which the agent shows you and does not send to the
+model.
 
 ## Cost
 
-Measured on an M-series Mac, per tool call:
+Measured on an M-series Mac, p95 over 110 calls:
 
-| | p50 | p95 |
-|---|---:|---:|
-| `nadzor hook` | 27.9 ms | 28.8 ms |
-| `nadzor hook --fast` | 13.4 ms | 14.1 ms |
+| what you configure | p95 | detects |
+| --- | ---: | --- |
+| `nadzor-hook`, daemon running | **8.4 ms** | everything |
+| `nadzor hook`, daemon running | 15.2 ms | everything |
+| `nadzor hook --fast` | 14.1 ms | Brazilian data only |
+| `nadzor hook` | 28.9 ms | everything |
+| `nadzor-hook`, no daemon | 36.3 ms | everything |
 
-Roughly 12 ms of that is process startup and 14 ms is compiling the secret
-rule set. `--fast` skips those rules: Brazilian data is still detected,
-credentials are not. Worth it only if you are scanning output that cannot
-contain a credential.
+Detection itself is 258µs. The rest is process startup and compiling 417
+secret rules, which is why the daemon and the small client exist: the daemon
+removes the compilation, and `nadzor-hook` removes most of the startup by not
+linking the rules at all.
 
-Whether 28 ms matters depends on the tool. Against a `Read` of a small file
-it is noticeable; against anything touching the network it disappears. A
-daemon mode that keeps the rules compiled between calls is the fix and is
-not built yet.
+`--fast` reaches a similar number by not looking for credentials. The daemon
+gets there without giving anything up, so prefer it.
 
 ## Scope
 
@@ -65,6 +80,10 @@ contain anything.
 
 ## If something breaks
 
-The hook is fail-open: malformed JSON, an unrecognized event shape, a
-structured rather than textual result, or any detection failure all return
-the event unchanged. Remove the block above and restart to rule it out.
+Every path is fail-open: malformed JSON, an unrecognized event shape, a
+structured rather than textual result, a daemon that is down, or any detection
+failure all return the event unchanged. Remove the block above and restart to
+rule it out.
+
+`nadzor daemon status` says whether the daemon is answering. When it is not,
+`nadzor-hook` runs the full binary instead — correct, just slower.

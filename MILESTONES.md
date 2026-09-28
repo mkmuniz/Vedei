@@ -243,9 +243,21 @@ echo $?                           # 0 = limpo, 3 = achou, 1 = erro
 
 `hooks/claude-code/` e `hooks/codex/`, prontos para copiar. `PostToolUse`: a saída da ferramenta passa pelo nadzor antes de voltar ao modelo.
 
-**3.3 — Modo daemon** ⏳ *pendente — ver a medição no critério de saída*
+**3.3 — Modo daemon** ✅
 
 Socket Unix, config pré-compilada carregada uma vez. É o que viabiliza o orçamento de 10 ms.
+
+```bash
+nadzor daemon                    # primeiro plano; launchd/systemd em hooks/
+nadzor daemon status             # 0 responde, 1 não responde
+nadzor daemon --idle-timeout 8h  # sai sozinho quando não é usado
+```
+
+O daemon sozinho não bastou. Medindo, detecção era 0,26 ms e o resto era setup: ~14 ms compilando as 417 regras e ~7 ms carregando um binário de 26 MB. O daemon tira os 14 ms e deixa 13,3 ms — ainda acima do orçamento, porque o que sobra é o próprio processo nascer.
+
+Daí o segundo binário, **`nadzor-hook`**: 5 MB, não importa o betterleaks, não detecta nada. Só fala com o socket. Com o daemon de pé, **8,4 ms p95**.
+
+Nada exige o daemon (ADR-005): sem ele, `nadzor-hook` executa o binário completo. Isso custa 36,3 ms — pior que chamar `nadzor hook` direto, porque são dois processos. Quem não vai rodar daemon deve configurar `nadzor hook`, e a doc do hook diz isso primeiro.
 
 **3.4 — `nadzor transcript scan`** (o que já vazou)
 
@@ -291,19 +303,36 @@ func TestStream_FailOpen(t *testing.T) {
 
 ### Critério de saída
 
-- [x] p95 do hook medido e documentado — **28,8 ms**, não os 10 ms estimados.
-      Decomposição: ~12 ms de spawn de processo, ~14 ms compilando as 417
-      regras de segredo. `--fast` pula as regras e faz 14,1 ms. O orçamento
-      de 10 ms era um chute e não é alcançável com um processo por chamada;
-      o modo daemon (3.3) é o que fecha essa diferença e continua pendente.
-- [ ] Sessão real: `cat` de arquivo com segredo chega tarjado ao modelo
-- [ ] Motor em pânico deixa o texto passar intacto
-- [ ] `transcript scan` acha segredo conhecido e não vaza o valor no relatório
-- [ ] Dois GIFs no README
+- [x] p95 do hook medido e documentado — **8,4 ms** com `nadzor-hook` + daemon,
+      dentro do orçamento de 10 ms. A primeira medição, com um processo por
+      chamada, deu 28,9 ms; o orçamento era um chute feito antes de existir o
+      que medir e acabou alcançável, mas só depois de atacar setup em vez de
+      detecção. Tabela completa em `hooks/README.md`.
+- [x] Sessão real: `cat` de arquivo com segredo chega tarjado ao modelo.
+      **Aqui estava o bug mais grave do repositório**: o motor de segredos
+      preenchia linha e coluna, nunca `ByteStart`/`ByteEnd`, e
+      `stream.Processor` tarja por offset. Toda credencial era anunciada como
+      tarjada no stderr e entregue ao modelo intacta. Coberto agora em três
+      camadas: `engine/secrets` (offsets existem e apontam para o valor),
+      `engine` (o texto que sai do processor não contém o segredo) e
+      `cmd/nadzor-hook` (o evento que volta ao agente não contém o segredo).
+- [x] Motor em pânico deixa o texto passar intacto — `TestProcess_FailsOpenOnPanic`
+- [x] `transcript scan` acha segredo conhecido e não vaza o valor no relatório
+- [ ] Dois GIFs no README — pendente, precisa de gravação de tela
 
 **Riscos**
 - **Latência** é o que mata. Hook que atrasa 200 ms por tool call ninguém usa.
 - **Falso positivo aqui é pior que em CI**: tarjar algo que o agente precisava quebra a tarefa. Começar conservador — só `ValidityStructural` e `ConfidenceHigh`.
+
+**O que rodar de verdade encontrou, e teste nenhum tinha pego**
+
+1. **Segredo detectado e não tarjado** (acima). O stderr dizia `redacted`, o texto saía com a chave. Um ano de testes de unidade em `engine/secrets` não pegaria: cada peça estava certa, o contrato entre elas não.
+2. **`card-pan` dentro de um UUID.** `11111111-2222-3333-4444-555555555555` virava cartão `4444-555555555555`, confiança alta — 16 dígitos que passam Luhn por coincidência. O padrão aceitava cada separador de forma independente. Agora exige agrupamento consistente: sem separador, ou grupos de 4 com o mesmo separador.
+3. **`chmod` no diretório pai do socket** falhava em `/tmp` (`operation not permitted`). Restringir o diretório só é nadzor quando nadzor o criou.
+4. **O daemon não desligava** com um cliente conectado e ocioso: fechar o listener não fecha conexões aceitas, então `SIGTERM` esperava para sempre.
+5. **Caminho de socket > 104 bytes** falha com `EINVAL` puro no macOS, que não diz nada. Agora é checado com a correção na mensagem.
+
+**Lacuna conhecida, não corrigida:** o betterleaks não tem regra para AWS access key ID (`AKIA…`) — nem a canônica de exemplo, nem uma aleatória. Stripe, GitHub PAT e Slack são detectados. É uma decisão defensável do upstream (um access key ID é identificador, não credencial), mas para o propósito aqui é um vazamento que passa. Fica para o M5, junto com o corpus.
 
 ---
 

@@ -16,7 +16,22 @@
 
 ## Estado
 
-**M2 concluído — a detecção funciona como biblioteca Go; ainda não há CLI.** Precisa de ferramenta hoje? Use [betterleaks](https://github.com/betterleaks/betterleaks) ou [kingfisher](https://github.com/mongodb/kingfisher). O nadzor é construído sobre o primeiro.
+**M3 concluído — já existe ferramenta funcionando para o caminho de agente.** O `nadzor hook` mantém segredos e dados pessoais fora do contexto do agente a **8,4 ms p95**, e o `nadzor transcript scan` reporta o que já chegou aos seus logs de sessão. Varredura de diretório e repositório, SARIF e a GitHub Action são do M4 — para CI hoje, use [betterleaks](https://github.com/betterleaks/betterleaks) ou [kingfisher](https://github.com/mongodb/kingfisher). O nadzor é construído sobre o primeiro.
+
+## Experimente
+
+```bash
+go install github.com/mkmuniz/nadzor/cmd/nadzor@latest
+go install github.com/mkmuniz/nadzor/cmd/nadzor-hook@latest
+
+echo 'cpf 529.982.247-25' | nadzor stream
+# cpf ***.***.***-25 [nadzor: cpf redacted]   (exit 3)
+
+nadzor daemon &                      # mantém as regras compiladas
+nadzor transcript scan               # o que já vazou nos seus logs de sessão
+```
+
+Depois ligue o hook no seu agente: [`hooks/`](hooks/). São dois binários, e é essa separação que deixa o hook rápido — o `nadzor` carrega 417 regras de segredo, o `nadzor-hook` tem 5 MB e só conversa com o daemon.
 
 ## O que detecta
 
@@ -96,7 +111,7 @@ Registros completos em [`docs/adr/`](docs/adr/).
 | M0 | Fundação | ✅ |
 | M1 | Detectores BR + validação offline | ✅ |
 | M2 | Motor de segredos via betterleaks | ✅ |
-| M3 | **MVP — superfície de IA** | 🚧 |
+| M3 | **MVP — superfície de IA** | ✅ |
 | M4 | CLI, CI/CD, SARIF, scrub de transcript | ⬜ |
 | M5 | Corpus multilíngue + calibração pt-BR | ⬜ |
 | M6 | SDK de runtime | ⬜ |
@@ -118,8 +133,9 @@ engine/secrets/   # betterleaks embrulhado atras dessa interface
 redact/           # tarja preservando formato
 report/           # JSON, JSONL, SARIF
 stream/           # stdin -> stdout, o caminho do MVP
+daemon/           # servidor e cliente do socket Unix — o caminho de 8,4 ms
 transcript/       # leitor de log de sessao de agente
-hooks/            # hooks do Claude Code e do Codex
+hooks/            # hooks do Claude Code e do Codex, units de launchd e systemd
 corpus/           # corpus multilingue de falso positivo
 ```
 
