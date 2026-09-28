@@ -438,3 +438,49 @@ func TestExtract_GroupedPANIsAcceptedWithoutAnIssuerRange(t *testing.T) {
 		t.Errorf("a grouped number was rejected for its issuer range")
 	}
 }
+
+// A fuzzer found this in under two seconds, and it is the worst class of false
+// positive this project can have.
+//
+// Every Brazilian phone number in E.164 form begins with 55, and 51 through 55
+// is the Mastercard issuer range. So a +55 number whose digits happen to
+// satisfy Luhn — about one in ten — was reported as a credit card. All 89 area
+// codes produce the same prefix, so this was not one unlucky number.
+//
+// The fix is that "+" is not a left boundary: a run of digits preceded by one
+// is a country code, not a document.
+func TestExtract_BrazilianPhoneIsNotACardPAN(t *testing.T) {
+	// The exact input the fuzzer minimized to, plus two more in the same shape.
+	for _, phone := range []string{"+5511980198775", "+5521987654321", "+5511999999994"} {
+		if !ValidateLuhn(phone[1:]) {
+			continue // only the Luhn-passing ones are at risk
+		}
+		if brand := DetectCardBrand(phone[1:]); brand == BrandUnknown {
+			t.Fatalf("the premise no longer holds: %s is outside every issuer range", phone)
+		}
+		for _, m := range Extract(phone) {
+			if m.Kind == KindPAN {
+				t.Errorf("%s yielded card-pan %q", phone, m.Value)
+			}
+		}
+	}
+}
+
+// The asymmetry is deliberate: a "+" after a document is ordinary — a URL, a
+// concatenation, a query string — so it must still count as a boundary there.
+func TestExtract_PlusAfterAValueIsStillABoundary(t *testing.T) {
+	for _, text := range []string{
+		"cpf=529.982.247-25+extra",
+		"529.982.247-25+",
+	} {
+		found := false
+		for _, m := range Extract(text) {
+			if m.Kind == KindCPF {
+				found = true
+			}
+		}
+		if !found {
+			t.Errorf("a CPF followed by %q was missed: %s", "+", text)
+		}
+	}
+}

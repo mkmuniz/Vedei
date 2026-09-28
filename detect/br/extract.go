@@ -85,8 +85,28 @@ func isBoundary(b byte) bool {
 	}
 }
 
+// isLeftBoundary is stricter than isBoundary by one character: a "+" before a
+// run of digits means a country code, so what follows is a phone number.
+//
+// That distinction is not cosmetic here. Every Brazilian number in E.164 form
+// begins with 55, and 51 through 55 is the Mastercard issuer range — so a
+// +55 phone whose digits happen to satisfy Luhn, about one in ten of them, was
+// being reported as a credit card. A fuzzer found it in under two seconds with
+// "+5511980198775", and it is not one unlucky number: all 89 area codes produce
+// the same prefix.
+//
+// The asymmetry is deliberate. A "+" after a document is ordinary — a URL, a
+// concatenation, a query string — so treating it as a boundary on the right
+// costs nothing, while treating it as one on the left costs this.
+func isLeftBoundary(b byte) bool {
+	if b == '+' {
+		return false
+	}
+	return isBoundary(b)
+}
+
 func hasBoundaries(s string, start, end int) bool {
-	if start > 0 && !isBoundary(s[start-1]) {
+	if start > 0 && !isLeftBoundary(s[start-1]) {
 		return false
 	}
 	if end < len(s) && !isBoundary(s[end]) {
