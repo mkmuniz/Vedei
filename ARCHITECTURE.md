@@ -122,7 +122,7 @@ const (
      │              (ex.: node_modules, testdata, binario)
      │
  [2] extract        regex por detector, tolerante a mascara
-     │              123.456.789-09 / 12345678909 / 123 456 789 09
+     │              123.456.789-09 / 12345678909 / 123.456.78909
      │
  [3] validate       digito verificador | Luhn | ISPB | estrutura
      │              -> invalido morre aqui, nao vira achado
@@ -136,6 +136,8 @@ const (
 ```
 
 Etapa 3 é o que separa nadzor de um scanner de regex. Um `grep` de CPF acha `000.000.000-00`; nadzor não, porque o dígito não fecha.
+
+**Divergência conhecida na etapa 2.** "Tolerante a máscara" não é uniforme entre detectores. CNS, título e PAN aceitam espaço como separador; CPF, CNPJ e PIS aceitam só `.`, `-` e `/`. Então `529 982 247 25` **não** é detectado como CPF hoje. Isso foi descoberto escrevendo um teste que assumia o contrário, e é uma decisão de calibração, não um esquecimento: aceitar espaço no CPF casa com qualquer coluna de tabela de três dígitos, e medir esse custo é justamente o que o corpus do M5 existe para fazer. Até lá o comportamento está documentado aqui em vez de prometido no código.
 
 ---
 
