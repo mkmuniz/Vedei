@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -28,7 +29,12 @@ func runHookBinary(t *testing.T, input string, args ...string) string {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, bin, append([]string{"hook"}, args...)...) //nolint:gosec // fixed path
+	// Point the socket at a path nothing listens on, so these tests exercise
+	// the in-process path whether or not a daemon happens to be running on
+	// the machine. The daemon path has its own tests.
+	args = append([]string{"hook", "--socket", filepath.Join(t.TempDir(), "absent.sock")}, args...)
+
+	cmd := exec.CommandContext(ctx, bin, args...) //nolint:gosec // fixed path
 	cmd.Stdin = strings.NewReader(input)
 	var out bytes.Buffer
 	cmd.Stdout = &out

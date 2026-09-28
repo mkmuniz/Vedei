@@ -145,12 +145,28 @@ Cada superfície tem um limite diferente. Ultrapassar o limite é bug, não lent
 
 | Superfície | Orçamento | Por quê |
 |---|---|---|
-| Hook de agente | **< 10 ms** p95 por chamada de ferramenta | roda a cada tool call; 200 ms torna o agente inutilizável |
+| Hook de agente | **< 10 ms** p95 por chamada de ferramenta — medido: **8,4 ms** com daemon | roda a cada tool call; 200 ms torna o agente inutilizável |
 | Middleware de log | **< 1 µs** quando não há achado | roda a cada linha de log de produção |
 | CLI / CI | throughput, não latência | alvo: > 50 MB/s em varredura de diretório |
 | Coletor otel | amostrável | inspecionar 100% do log de produção tem custo; deve ser configurável |
 
-Consequência de projeto: config é **pré-compilada uma vez** e reaproveitada. Recarregar e recompilar regra por invocação custa ~16 ms — é o bug conhecido do betterleaks (issue #343) e não deve ser repetido.
+Consequência de projeto: config é **pré-compilada uma vez** e reaproveitada. Recarregar e recompilar regra por invocação custa ~14 ms — é o bug conhecido do betterleaks (issue #343) e não deve ser repetido.
+
+O orçamento de 10 ms era um chute feito antes de existir o que medir, e a primeira medição do hook pronto deu 28,9 ms. A decomposição mostrou que detecção era 1% da conta:
+
+| custo | tempo |
+|---|---:|
+| detecção em si | 0,26 ms |
+| compilar as 417 regras de segredo | ~14 ms |
+| carregar um binário de 26 MB | ~7 ms |
+| spawn do processo + init do runtime Go | ~5 ms |
+
+Duas mudanças fecharam a diferença, e as duas atacam setup, não detecção (ADR-006):
+
+1. **`nadzor daemon`** mantém as regras compiladas atrás de um socket Unix. Tira os 14 ms.
+2. **`nadzor-hook`**, cliente de 5 MB que não importa o betterleaks. Tira ~6 dos 7 ms de carga.
+
+Resultado medido, p95 sobre 110 chamadas: **8,4 ms**. Sem daemon, `nadzor hook` continua funcionando a 28,9 ms — nada exige o daemon (ADR-005).
 
 ---
 
@@ -171,13 +187,17 @@ Classificação não determinística pode reordenar fila de triagem. Não pode d
 **ADR-005 — Fail-open na tarja, fail-closed no relatório.**
 Erro no hook deixa o texto passar (quebrar a sessão do usuário é pior). Erro na varredura de CI falha a varredura (reportar "limpo" quando quebrou é pior).
 
+**ADR-006 — Um daemon guarda as regras compiladas, e o cliente do hook é pequeno.**
+Detecção custa 0,26 ms; setup custava 28,6 ms e era refeito a cada tool call. O daemon compila uma vez e responde num socket Unix `0600`, domínio Unix apenas — o que atravessa esse socket é texto que acabou de ser julgado sensível, então não existe modo TCP. `nadzor-hook` tem 5 MB porque não importa o betterleaks. Nada exige o daemon: todo chamador cai para varredura em processo.
+
 ---
 
 ## 8. Estrutura de pastas
 
 ```
 nadzor/
-├── cmd/nadzor/            # CLI (cobra)
+├── cmd/nadzor/            # CLI (cobra) + o daemon
+├── cmd/nadzor-hook/       # cliente magro do hook          (M3)
 │
 ├── detect/
 │   ├── types.go           # Finding, Validity, Confidence, Location
@@ -201,8 +221,10 @@ nadzor/
 ├── fingerprint/           # SHA-256 estavel do achado
 │
 ├── stream/                # stdin -> stdout            (M3)
+├── daemon/                # servidor e cliente do socket Unix (M3)
+├── internal/hookevent/    # parse/rewrite do evento de hook (M3)
 ├── transcript/            # leitor de *.jsonl de agente (M3/M4)
-├── hooks/                 # Claude Code, Codex          (M3)
+├── hooks/                 # Claude Code, Codex, launchd, systemd (M3)
 ├── sdk/{go,node,python}/  #                             (M6)
 ├── otel/                  #                             (M8)
 ├── ai/                    # triagem, geracao de regra, MCP (M7)

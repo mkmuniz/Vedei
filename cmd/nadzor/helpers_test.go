@@ -1,54 +1,9 @@
 package main
 
 import (
-	"encoding/json"
 	"strings"
 	"testing"
 )
-
-func TestFindOutput(t *testing.T) {
-	cases := []struct {
-		name      string
-		event     string
-		wantField string
-		wantText  string
-		wantOK    bool
-	}{
-		{"claude code", `{"tool_response":"saida"}`, "tool_response", "saida", true},
-		{"codex", `{"output":"saida"}`, "output", "saida", true},
-		{"no known field", `{"other":"saida"}`, "", "", false},
-		// A structured result is left alone rather than guessed at.
-		{"structured", `{"tool_response":{"a":1}}`, "", "", false},
-		{"empty object", `{}`, "", "", false},
-	}
-
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			var ev map[string]json.RawMessage
-			if err := json.Unmarshal([]byte(c.event), &ev); err != nil {
-				t.Fatalf("unmarshal: %v", err)
-			}
-			field, text, ok := findOutput(ev)
-			if field != c.wantField || text != c.wantText || ok != c.wantOK {
-				t.Errorf("findOutput() = (%q, %q, %v), want (%q, %q, %v)",
-					field, text, ok, c.wantField, c.wantText, c.wantOK)
-			}
-		})
-	}
-}
-
-// Fields are tried in order so the agent's own name for the output wins over
-// a generic one when an event carries both.
-func TestFindOutput_PrefersTheMostSpecificField(t *testing.T) {
-	var ev map[string]json.RawMessage
-	if err := json.Unmarshal([]byte(`{"result":"generic","tool_response":"specific"}`), &ev); err != nil {
-		t.Fatalf("unmarshal: %v", err)
-	}
-	field, text, _ := findOutput(ev)
-	if field != "tool_response" || text != "specific" {
-		t.Errorf("got %q = %q, want tool_response", field, text)
-	}
-}
 
 func TestTruncate(t *testing.T) {
 	cases := map[string]string{

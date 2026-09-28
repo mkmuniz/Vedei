@@ -17,7 +17,22 @@
 
 ## Status
 
-**M2 done — detection works as a Go library; there is no CLI yet.** Need a working tool today? Use [betterleaks](https://github.com/betterleaks/betterleaks) or [kingfisher](https://github.com/mongodb/kingfisher). nadzor builds on the former.
+**M3 done — there is a working tool for the agent path.** `nadzor hook` keeps secrets and personal data out of a coding agent's context at **8.4 ms p95**, and `nadzor transcript scan` reports what already reached your session logs. Directory and repository scanning, SARIF and the GitHub Action are M4, so for CI today use [betterleaks](https://github.com/betterleaks/betterleaks) or [kingfisher](https://github.com/mongodb/kingfisher). nadzor builds on the former.
+
+## Try it
+
+```bash
+go install github.com/mkmuniz/nadzor/cmd/nadzor@latest
+go install github.com/mkmuniz/nadzor/cmd/nadzor-hook@latest
+
+echo 'cpf 529.982.247-25' | nadzor stream
+# cpf ***.***.***-25 [nadzor: cpf redacted]   (exit 3)
+
+nadzor daemon &                      # keeps the rules compiled
+nadzor transcript scan               # what already leaked into your session logs
+```
+
+Then wire the hook into your agent: [`hooks/`](hooks/). Two binaries, because the split is what makes the hook fast — `nadzor` carries 417 secret rules, `nadzor-hook` is 5 MB and only talks to the daemon.
 
 ## What it detects
 
@@ -97,7 +112,7 @@ Full records in [`docs/adr/`](docs/adr/).
 | M0 | Foundation | ✅ |
 | M1 | Brazilian detectors + offline validation | ✅ |
 | M2 | Secret engine via betterleaks | ✅ |
-| M3 | **MVP — AI agent surface** | 🚧 |
+| M3 | **MVP — AI agent surface** | ✅ |
 | M4 | CLI, CI/CD, SARIF, transcript scrub | ⬜ |
 | M5 | Multilingual false-positive corpus + pt-BR calibration | ⬜ |
 | M6 | Runtime SDK | ⬜ |
@@ -119,8 +134,9 @@ engine/secrets/   # betterleaks wrapped behind that interface
 redact/           # format-preserving redaction
 report/           # JSON, JSONL, SARIF
 stream/           # stdin -> stdout, the MVP path
+daemon/           # Unix socket server and client — the 8.4 ms path
 transcript/       # agent session log reader
-hooks/            # Claude Code and Codex hooks
+hooks/            # Claude Code and Codex hooks, launchd and systemd units
 corpus/           # multilingual false-positive corpus
 ```
 

@@ -1,9 +1,12 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/spf13/cobra"
 )
@@ -24,12 +27,18 @@ Exit codes: 0 clean, 3 findings, 1 error.`,
 		Version:       version,
 	}
 
-	root.AddCommand(newStreamCmd(), newTranscriptCmd(), newHookCmd())
+	root.AddCommand(newStreamCmd(), newTranscriptCmd(), newHookCmd(), newDaemonCmd())
 	return root
 }
 
 func main() {
-	if err := newRootCmd().Execute(); err != nil {
+	// The daemon runs until it is stopped, so the process needs to hear
+	// SIGINT and SIGTERM: the signal cancels the context, which closes the
+	// listener and unlinks the socket instead of leaving a stale one behind.
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	if err := newRootCmd().ExecuteContext(ctx); err != nil {
 		var coder exitCoder
 		if errors.As(err, &coder) {
 			os.Exit(coder.ExitCode())

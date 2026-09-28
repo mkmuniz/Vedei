@@ -116,19 +116,23 @@ func (e *Engine) Scan(ctx context.Context, content []byte, meta detect.Metadata)
 	byPrint := make(map[string]*detect.Finding, len(raw))
 	order := make([]string, 0, len(raw))
 
+	text := string(content)
 	for _, f := range raw {
 		if f.Secret == "" {
 			continue
 		}
 		fp := fingerprint.Of(f.RuleID, f.Secret)
-		loc := detect.Location{
-			Path:   meta.Path,
-			Line:   f.StartLine,
-			Column: f.StartColumn,
+		locs := locationsOf(text, f.Secret, meta.Path)
+		if len(locs) == 0 {
+			// The rule reported a secret that is not a substring of the input.
+			// Nothing can be redacted, and a finding whose value cannot be
+			// pointed at would report a leak the caller cannot act on.
+			continue
 		}
 
-		if existing, ok := byPrint[fp]; ok {
-			existing.Locations = append(existing.Locations, loc)
+		if _, seen := byPrint[fp]; seen {
+			// locationsOf already recorded every occurrence of this value, so
+			// a second rule hit on the same credential adds nothing.
 			continue
 		}
 
@@ -141,7 +145,7 @@ func (e *Engine) Scan(ctx context.Context, content []byte, meta detect.Metadata)
 			Confidence:  confidenceOf(f),
 			Reason:      reasonOf(f),
 			Fingerprint: fp,
-			Locations:   []detect.Location{loc},
+			Locations:   locs,
 			Extra:       extraOf(f),
 		}
 		order = append(order, fp)
@@ -152,6 +156,55 @@ func (e *Engine) Scan(ctx context.Context, content []byte, meta detect.Metadata)
 		out = append(out, *byPrint[fp])
 	}
 	return out, nil
+}
+
+// locationsOf returns every byte range in text holding secret.
+//
+// betterleaks reports a line and a column, not a byte offset, and the
+// redaction path needs offsets: without them stream.Processor has nothing to
+// replace, so a secret was reported on stderr and still handed to the model.
+// That was the bug this function exists to close — the whole promise of the
+// tool, silently broken for every credential.
+//
+// Every occurrence is recorded, not only the reported one. Redaction that
+// leaves the second copy of a key in place has not redacted it.
+func locationsOf(text, secret, path string) []detect.Location {
+	if secret == "" {
+		return nil
+	}
+	var out []detect.Location
+	for from := 0; from < len(text); {
+		i := strings.Index(text[from:], secret)
+		if i < 0 {
+			break
+		}
+		start := from + i
+		end := start + len(secret)
+		out = append(out, locationOf(text, start, end, path))
+		from = end
+	}
+	return out
+}
+
+// locationOf builds a Location, counting the line and column up to start so a
+// report can name a place a person recognizes.
+func locationOf(text string, start, end int, path string) detect.Location {
+	line, col := 1, 1
+	for i := 0; i < start && i < len(text); i++ {
+		if text[i] == '\n' {
+			line++
+			col = 1
+		} else {
+			col++
+		}
+	}
+	return detect.Location{
+		Path:      path,
+		Line:      line,
+		Column:    col,
+		ByteStart: start,
+		ByteEnd:   end,
+	}
 }
 
 // validityOf maps betterleaks' validation status onto nadzor's vocabulary.

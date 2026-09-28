@@ -64,3 +64,33 @@ nadzor does not enable. Running `govulncheck` is part of CI for that reason.
 **A structurally valid document may still be fabricated.** nadzor validates
 check digits, never identity, and never will (ADR-002). A generated CPF in a
 test fixture is indistinguishable from a real one by arithmetic alone.
+
+**AWS access key IDs are not detected.** Neither the canonical example nor a
+random one: the upstream corpus has no rule for `AKIA…` alone, which is a
+defensible position — an access key ID is an identifier, and the secret access
+key is the credential. For keeping data out of an agent's context it is still a
+gap, and a real one. Stripe, GitHub PAT and Slack tokens are detected. M5.
+
+**The daemon is a long-lived process holding a Unix socket.** If you run
+`nadzor daemon`, note what it is and is not:
+
+- The socket is created mode `0600`. Where nadzor creates its directory, that
+  directory is `0700`; where the directory already existed, nadzor refuses to
+  bind if it is world-writable without the sticky bit, and otherwise leaves the
+  mode alone — restricting a shared directory is not its call.
+- **Unix-domain only.** There is no TCP mode and there should not be one:
+  everything crossing that socket is text that was just judged sensitive.
+- Anyone who can open the socket can send text and read the redacted answer.
+  That is the same reach as running `nadzor` yourself, which is why the mode
+  and the directory check matter.
+- **Requests are never logged.** Only accept and handler failures are, because
+  the text is the sensitive part.
+- The daemon holds no state beyond the compiled rule set, and no value is
+  written to disk. `--idle-timeout` makes it exit when unused.
+- A request is capped at 16 MB, so one client cannot decide how much memory the
+  process holds.
+
+**Findings crossing the socket cannot carry the raw value.** `Finding.Raw` is
+`json:"-"`, so the process boundary enforces ADR-003 rather than trusting it.
+There is a test that reads the raw bytes off the wire and fails if the value
+appears.

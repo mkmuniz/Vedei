@@ -1,0 +1,28 @@
+# Keeps the nadzor daemon running so each hook call costs a socket round trip
+# instead of compiling 417 rules. Copy to ~/.config/systemd/user/ and fix the
+# path to your binary (`which nadzor`).
+#
+#   systemctl --user enable --now nadzor
+#
+# A user unit, not a system one: the socket is per-user by design, and the
+# daemon should have exactly the reach of the person whose agent it serves.
+
+[Unit]
+Description=nadzor redaction daemon
+Documentation=https://github.com/mkmuniz/nadzor
+
+[Service]
+ExecStart=%h/go/bin/nadzor daemon
+Restart=on-failure
+RestartSec=2
+
+# The daemon reads nothing from disk and writes nothing but its socket.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+RuntimeDirectory=nadzor
+RuntimeDirectoryMode=0700
+
+[Install]
+WantedBy=default.target

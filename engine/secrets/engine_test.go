@@ -158,3 +158,52 @@ func TestScan_UpstreamLoggerCannotEmitTheSecret(t *testing.T) {
 		t.Errorf("upstream logger should be silent, wrote: %s", captured.String())
 	}
 }
+
+// A finding without byte offsets is a finding stream.Processor cannot act on,
+// which is how every secret reached the model while stderr claimed it had been
+// redacted. The offsets are load-bearing, so they are asserted directly.
+func TestScan_FindingsCarryByteOffsets(t *testing.T) {
+	text := `key = "` + stripeKey + `"`
+	fs := scan(t, text)
+	if len(fs) == 0 {
+		t.Fatal("no findings")
+	}
+
+	for _, f := range fs {
+		if len(f.Locations) == 0 {
+			t.Fatalf("%s has no locations", f.Type)
+		}
+		for _, loc := range f.Locations {
+			if loc.ByteEnd <= loc.ByteStart {
+				t.Errorf("%s: empty range %d..%d", f.Type, loc.ByteStart, loc.ByteEnd)
+				continue
+			}
+			if loc.ByteEnd > len(text) {
+				t.Errorf("%s: range %d..%d is past the end of a %d byte input",
+					f.Type, loc.ByteStart, loc.ByteEnd, len(text))
+				continue
+			}
+			// The range has to cover the value itself, or replacing it would
+			// mask the wrong bytes.
+			if got := text[loc.ByteStart:loc.ByteEnd]; got != stripeKey {
+				t.Errorf("%s: range covers %q, not the secret", f.Type, got)
+			}
+		}
+	}
+}
+
+// Every occurrence has to be covered: leaving the second copy in place is not
+// a redaction.
+func TestScan_LocatesEveryOccurrence(t *testing.T) {
+	text := `a = "` + stripeKey + `"` + "\n" + `b = "` + stripeKey + `"`
+	fs := scan(t, text)
+	if len(fs) != 1 {
+		t.Fatalf("want 1 finding, got %d", len(fs))
+	}
+	if n := len(fs[0].Locations); n != 2 {
+		t.Fatalf("want 2 locations, got %d", n)
+	}
+	if l := fs[0].Locations[1].Line; l != 2 {
+		t.Errorf("the second occurrence is on line %d, want 2", l)
+	}
+}
