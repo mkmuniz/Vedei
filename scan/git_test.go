@@ -2,6 +2,7 @@ package scan_test
 
 import (
 	"context"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -287,5 +288,58 @@ func TestGitRef_String(t *testing.T) {
 		if got := ref.String(); got != want {
 			t.Errorf("%+v.String() = %q, want %q", ref, got, want)
 		}
+	}
+}
+
+// gosec flagged the exec call as "subprocess launched with variable", and the
+// concern was real. Arguments go to git as an array, so there is no shell to
+// inject into, but git reads a leading "-" as a flag wherever a revision is
+// expected:
+//
+//	nadzor diff --base "--output=/tmp/pwned"
+//
+// became "git diff --name-only -z --output=/tmp/pwned HEAD", and git wrote the
+// file. A revision is never spelled with a leading dash, so refusing one closes
+// the class rather than the one flag that was tried.
+func TestGitScanner_RefusesARevisionThatLooksLikeAFlag(t *testing.T) {
+	repo := gitRepo(t)
+	writeFile(t, repo, "a.txt", "x")
+	git(t, repo, "add", ".")
+	git(t, repo, "commit", "-qm", "first")
+
+	g := gitScanner(t, repo)
+	marker := filepath.Join(t.TempDir(), "written-by-git.txt")
+
+	for _, rev := range []string{"--output=" + marker, "-x", "--upload-pack=touch"} {
+		if _, err := g.Diff(context.Background(), rev, "HEAD"); !errors.Is(err, scan.ErrRevisionLooksLikeAFlag) {
+			t.Errorf("Diff(base=%q) error = %v, want ErrRevisionLooksLikeAFlag", rev, err)
+		}
+		if _, err := g.Diff(context.Background(), "HEAD", rev); !errors.Is(err, scan.ErrRevisionLooksLikeAFlag) {
+			t.Errorf("Diff(head=%q) error = %v, want ErrRevisionLooksLikeAFlag", rev, err)
+		}
+		if _, err := g.History(context.Background(), rev); !errors.Is(err, scan.ErrRevisionLooksLikeAFlag) {
+			t.Errorf("History(%q) error = %v, want ErrRevisionLooksLikeAFlag", rev, err)
+		}
+	}
+
+	if _, err := os.Stat(marker); err == nil {
+		t.Fatal("git wrote a file: the argument reached it as a flag")
+	}
+}
+
+// The default, --all, is a flag and has to keep working: the check is on what
+// a caller passes, not on what History builds for itself.
+func TestGitScanner_DefaultRevisionStillWorks(t *testing.T) {
+	repo := gitRepo(t)
+	writeFile(t, repo, "a.txt", "cpf "+testCPF)
+	git(t, repo, "add", ".")
+	git(t, repo, "commit", "-qm", "first")
+
+	res, err := gitScanner(t, repo).History(context.Background())
+	if err != nil {
+		t.Fatalf("History with no revisions: %v", err)
+	}
+	if res.Total() != 1 {
+		t.Errorf("Total() = %d, want 1", res.Total())
 	}
 }

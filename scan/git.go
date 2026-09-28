@@ -3,6 +3,7 @@ package scan
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"os/exec"
 	"strconv"
@@ -48,9 +49,30 @@ func NewGitScanner(s *Scanner, repo string) (*GitScanner, error) {
 	return &GitScanner{scanner: s, repo: repo, git: git}, nil
 }
 
+// ErrRevisionLooksLikeAFlag is returned for a revision starting with "-".
+var ErrRevisionLooksLikeAFlag = errors.New("scan: a revision may not start with '-'")
+
+// checkRev refuses a revision git would read as an option.
+//
+// Arguments are passed as an array, so there is no shell to inject into, but
+// git parses a leading "-" as a flag wherever a revision is expected. gosec
+// flagged the exec call and the concern turned out to be real:
+//
+//	nadzor diff --base "--output=/tmp/pwned"
+//
+// became "git diff --name-only -z --output=/tmp/pwned HEAD", and git wrote the
+// file. A revision is never spelled with a leading dash, so refusing one costs
+// nothing and closes the whole class rather than the one flag that was tried.
+func checkRev(rev string) error {
+	if strings.HasPrefix(rev, "-") {
+		return fmt.Errorf("%w: %q", ErrRevisionLooksLikeAFlag, rev)
+	}
+	return nil
+}
+
 // run executes a git command in the repository and returns its stdout.
 func (g *GitScanner) run(ctx context.Context, args ...string) ([]byte, error) {
-	cmd := exec.CommandContext(ctx, g.git, append([]string{"-C", g.repo}, args...)...) //nolint:gosec // git from PATH, fixed arguments
+	cmd := exec.CommandContext(ctx, g.git, append([]string{"-C", g.repo}, args...)...) //#nosec G204 -- git from PATH with a fixed argument array and no shell; revisions are checked by checkRev, since git reads a leading dash as a flag
 	var out, errBuf bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &out, &errBuf
 	if err := cmd.Run(); err != nil {
@@ -82,6 +104,12 @@ func (g *GitScanner) Staged(ctx context.Context) (Result, error) {
 // commit on every push is how a secret scanner becomes the slowest step in the
 // pipeline, and the commits before the base were already scanned once.
 func (g *GitScanner) Diff(ctx context.Context, base, head string) (Result, error) {
+	for _, rev := range []string{base, head} {
+		if err := checkRev(rev); err != nil {
+			return Result{}, err
+		}
+	}
+
 	names, err := g.run(ctx, "diff", "--name-only", "--diff-filter=ACMR", "-z", base, head)
 	if err != nil {
 		return Result{}, err
@@ -95,6 +123,8 @@ func (g *GitScanner) Diff(ctx context.Context, base, head string) (Result, error
 
 	for _, path := range splitNUL(names) {
 		ref := GitRef{Commit: head, Path: path}
+		// "rev:path" never begins with a dash here because head was checked,
+		// and git resolves the whole string as one object name.
 		blob, err := g.run(ctx, "show", head+":"+path)
 		if err != nil {
 			// A path deleted in head, or a submodule. Neither is a failure.
@@ -113,6 +143,12 @@ func (g *GitScanner) Diff(ctx context.Context, base, head string) (Result, error
 func (g *GitScanner) History(ctx context.Context, revs ...string) (Result, error) {
 	if len(revs) == 0 {
 		revs = []string{"--all"}
+	} else {
+		for _, rev := range revs {
+			if err := checkRev(rev); err != nil {
+				return Result{}, err
+			}
+		}
 	}
 
 	ignores, err := g.loadIgnore(ctx)
