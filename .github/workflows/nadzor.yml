@@ -1,0 +1,51 @@
+# nadzor scanning itself. A security tool that is not run against its own
+# repository is making a claim it has not tested.
+name: nadzor
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # The history walk is expensive, so it runs weekly rather than per push.
+    - cron: "17 4 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # mode=diff needs the base commit, which a shallow clone does not have.
+          fetch-depth: 0
+
+      # Built from the checkout, so a pull request is scanned by the code under
+      # review rather than by the published release. Scanning yourself with last
+      # month's binary proves less than it appears to.
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.27"
+
+      - name: Build nadzor from this checkout
+        run: |
+          make build
+          echo "$PWD/bin" >> "$GITHUB_PATH"
+
+      - name: Scan
+        uses: ./
+        with:
+          version: ""
+          mode: ${{ github.event_name == 'schedule' && 'history' || 'diff' }}
+          # The repository holds test fixtures with valid check digits by design,
+          # so findings are reported to the Security tab rather than failing the
+          # build. .nadzorignore is what silences the ones that are deliberate.
+          fail-on-findings: "false"
+          # A pull request from a fork gets a read-only token, so the upload
+          # would fail on something the contributor cannot fix.
+          upload-sarif: ${{ github.event.pull_request.head.repo.fork != true }}

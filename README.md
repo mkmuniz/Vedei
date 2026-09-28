@@ -17,22 +17,41 @@
 
 ## Status
 
-**M3 done — there is a working tool for the agent path.** `nadzor hook` keeps secrets and personal data out of a coding agent's context at **8.4 ms p95**, and `nadzor transcript scan` reports what already reached your session logs. Directory and repository scanning, SARIF and the GitHub Action are M4, so for CI today use [betterleaks](https://github.com/betterleaks/betterleaks) or [kingfisher](https://github.com/mongodb/kingfisher). nadzor builds on the former.
+**M4 done — the CLI, CI and the agent path all work.** `nadzor scan`, `nadzor git` and `nadzor diff` report to table, JSON, JSONL or SARIF; the GitHub Action uploads to Code Scanning; `nadzor hook` keeps secrets out of a coding agent's context at **8.4 ms p95**; `nadzor transcript scan` and `scrub` handle what already leaked. Multilingual false-positive calibration is M5, and it is the thing most likely to annoy you before then — see the note under the roadmap.
 
 ## Try it
 
 ```bash
 go install github.com/mkmuniz/nadzor/cmd/nadzor@latest
 go install github.com/mkmuniz/nadzor/cmd/nadzor-hook@latest
+```
+
+```bash
+nadzor scan .                        # a tree, honouring .gitignore
+nadzor scan . --format sarif -o nadzor.sarif
+nadzor git                           # the history, including deleted files
+nadzor diff --staged                 # what is about to be committed
+nadzor transcript scan               # what already leaked into your session logs
 
 echo 'cpf 529.982.247-25' | nadzor stream
 # cpf ***.***.***-25 [nadzor: cpf redacted]   (exit 3)
-
-nadzor daemon &                      # keeps the rules compiled
-nadzor transcript scan               # what already leaked into your session logs
 ```
 
-Then wire the hook into your agent: [`hooks/`](hooks/). Two binaries, because the split is what makes the hook fast — `nadzor` carries 417 secret rules, `nadzor-hook` is 5 MB and only talks to the daemon.
+Exit codes are distinct on purpose: **0** clean, **3** findings, **1** the scan itself failed, with 1 outranking 3. A pipeline that cannot tell a leak from a broken scan will read a permission error as a clean run.
+
+In CI:
+
+```yaml
+- uses: mkmuniz/nadzor@v1
+  with:
+    mode: diff          # only what changed; "history" on a schedule
+```
+
+Wire the hook into your agent: [`hooks/`](hooks/). Two binaries, because the split is what makes the hook fast — `nadzor` carries 417 secret rules, `nadzor-hook` is 5 MB and only talks to the daemon.
+
+## Silencing what is deliberate
+
+`.nadzorignore` takes a finding fingerprint, derived from the type and the normalized value and **never from the location** — so an entry survives the file being moved or renamed. This repository's own file is [`.nadzorignore`](.nadzorignore): 71 findings, 21 fingerprints, each with the reason written next to it. Nothing is silenced by path, on purpose. Silencing `*_test.go` wholesale would also silence a credential genuinely committed into a test, which is a place credentials genuinely end up.
 
 ## What it detects
 
@@ -113,7 +132,7 @@ Full records in [`docs/adr/`](docs/adr/).
 | M1 | Brazilian detectors + offline validation | ✅ |
 | M2 | Secret engine via betterleaks | ✅ |
 | M3 | **MVP — AI agent surface** | ✅ |
-| M4 | CLI, CI/CD, SARIF, transcript scrub | ⬜ |
+| M4 | CLI, CI/CD, SARIF, transcript scrub | ✅ |
 | M5 | Multilingual false-positive corpus + pt-BR calibration | ⬜ |
 | M6 | Runtime SDK | ⬜ |
 | M7 | AI layer | ⬜ |
@@ -133,10 +152,12 @@ detect/engine.go  # the Engine interface — insulation from betterleaks' v2 API
 engine/secrets/   # betterleaks wrapped behind that interface
 redact/           # format-preserving redaction
 report/           # JSON, JSONL, SARIF
+scan/             # directory walker, gitignore matcher, git history
+report/           # table, JSON, JSONL, SARIF
 stream/           # stdin -> stdout, the MVP path
 daemon/           # Unix socket server and client — the 8.4 ms path
 transcript/       # agent session log reader
-hooks/            # Claude Code and Codex hooks, launchd and systemd units
+hooks/            # agent hooks, git hooks, launchd and systemd units
 corpus/           # multilingual false-positive corpus
 ```
 

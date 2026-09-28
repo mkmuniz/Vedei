@@ -85,8 +85,28 @@ func isBoundary(b byte) bool {
 	}
 }
 
+// isLeftBoundary is stricter than isBoundary by one character: a "+" before a
+// run of digits means a country code, so what follows is a phone number.
+//
+// That distinction is not cosmetic here. Every Brazilian number in E.164 form
+// begins with 55, and 51 through 55 is the Mastercard issuer range — so a
+// +55 phone whose digits happen to satisfy Luhn, about one in ten of them, was
+// being reported as a credit card. A fuzzer found it in under two seconds with
+// "+5511980198775", and it is not one unlucky number: all 89 area codes produce
+// the same prefix.
+//
+// The asymmetry is deliberate. A "+" after a document is ordinary — a URL, a
+// concatenation, a query string — so treating it as a boundary on the right
+// costs nothing, while treating it as one on the left costs this.
+func isLeftBoundary(b byte) bool {
+	if b == '+' {
+		return false
+	}
+	return isBoundary(b)
+}
+
 func hasBoundaries(s string, start, end int) bool {
-	if start > 0 && !isBoundary(s[start-1]) {
+	if start > 0 && !isLeftBoundary(s[start-1]) {
 		return false
 	}
 	if end < len(s) && !isBoundary(s[end]) {
@@ -228,6 +248,42 @@ func overlaps(taken []bool, start, end int) bool {
 }
 
 // validate dispatches a candidate to the validator for its kind.
+// validatePAN accepts a card number, and rejects the thing that looks most like
+// one and is not: a timestamp.
+//
+// Luhn passes on a random digit run roughly one time in ten, and unbroken runs
+// of 13 to 19 digits are everywhere. Scanning nadzor's own repository found
+// "20240915155400" in go.mod — the timestamp inside a Go pseudo-version —
+// reported as a card at high confidence. YYYYMMDDHHMMSS appears in module
+// versions, log lines, filenames and migration names, so this is a whole class
+// of false positive rather than one unlucky number.
+//
+// So an unbroken run must also begin with a recognized issuer range. Every real
+// card does, and a timestamp does not: no network issues numbers starting 19, 20
+// or 21. A number written in groups of four is exempt, because that formatting
+// is itself the evidence — nobody writes a timestamp as "2024 0915 1554 00".
+func validatePAN(v string) bool {
+	if !ValidateLuhn(v) {
+		return false
+	}
+	if hasGroupSeparators(v) {
+		return true
+	}
+	return DetectCardBrand(v) != BrandUnknown
+}
+
+// hasGroupSeparators reports whether the value was written in groups rather than
+// as one unbroken run.
+func hasGroupSeparators(v string) bool {
+	for i := 0; i < len(v); i++ {
+		switch v[i] {
+		case ' ', '\t', '-', '.':
+			return true
+		}
+	}
+	return false
+}
+
 func validate(k Kind, v string) bool {
 	switch k {
 	case KindCPF:
@@ -245,7 +301,7 @@ func validate(k Kind, v string) bool {
 	case KindCNS:
 		return ValidateCNS(v)
 	case KindPAN:
-		return ValidateLuhn(v)
+		return validatePAN(v)
 	case KindPixKey:
 		return ValidateChavePix(v)
 	case KindE2EID:

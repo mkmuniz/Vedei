@@ -2,6 +2,7 @@ package br
 
 import (
 	"context"
+	"sort"
 	"time"
 
 	"github.com/mkmuniz/nadzor/detect"
@@ -30,6 +31,66 @@ func (e *Engine) Capabilities() detect.Capabilities {
 	}
 }
 
+// dropOverlaps keeps one match per region of the text.
+//
+// Extract and ExtractPixKeys are separate passes, each with its own internal
+// overlap guard, so neither sees the other's matches. A value both can claim —
+// a phone number written as a Pix key, whose digits also satisfy Luhn — came
+// back twice, at two types, over the same bytes.
+//
+// That has to be resolved here rather than downstream. The redaction path
+// rewrites by byte offset and skips a span that overlaps one it already wrote,
+// so an overlap silently discards whichever finding sorted second: the output
+// is safe, but which of the two survived depends on sort order, and the report
+// counts the same value twice.
+//
+// The longer match wins, because it is the one that saw the whole token: for
+// "+5511980198775", the Pix key includes the country code and the card
+// candidate is the fragment after it. Ties go to the earlier match, which keeps
+// the result stable across runs.
+func dropOverlaps(matches []brdetect.Match) []brdetect.Match {
+	if len(matches) < 2 {
+		return matches
+	}
+
+	order := make([]int, len(matches))
+	for i := range order {
+		order[i] = i
+	}
+	sort.SliceStable(order, func(a, b int) bool {
+		x, y := matches[order[a]], matches[order[b]]
+		if lx, ly := x.End-x.Start, y.End-y.Start; lx != ly {
+			return lx > ly
+		}
+		return x.Start < y.Start
+	})
+
+	keep := make([]bool, len(matches))
+	var taken []brdetect.Match
+	for _, i := range order {
+		m := matches[i]
+		clash := false
+		for _, t := range taken {
+			if m.Start < t.End && t.Start < m.End {
+				clash = true
+				break
+			}
+		}
+		if !clash {
+			taken = append(taken, m)
+			keep[i] = true
+		}
+	}
+
+	out := matches[:0:0]
+	for i, m := range matches {
+		if keep[i] {
+			out = append(out, m)
+		}
+	}
+	return out
+}
+
 // Scan implements detect.Engine.
 //
 // Every match returned by the extractor has already passed its validator, so
@@ -38,8 +99,7 @@ func (e *Engine) Capabilities() detect.Capabilities {
 func (e *Engine) Scan(_ context.Context, content []byte, meta detect.Metadata) ([]detect.Finding, error) {
 	s := string(content)
 
-	matches := brdetect.Extract(s)
-	matches = append(matches, brdetect.ExtractPixKeys(s)...)
+	matches := dropOverlaps(append(brdetect.Extract(s), brdetect.ExtractPixKeys(s)...))
 	if len(matches) == 0 {
 		return nil, nil
 	}

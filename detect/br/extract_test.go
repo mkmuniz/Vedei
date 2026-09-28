@@ -377,3 +377,110 @@ func TestExtractPixKeys_BareUUIDIsNotAPixKey(t *testing.T) {
 		}
 	}
 }
+
+// A timestamp is the thing that looks most like a card number and is not. Luhn
+// passes on a random digit run about one time in ten, and YYYYMMDDHHMMSS is
+// everywhere: Go pseudo-versions, log lines, filenames, migration names.
+//
+// Every one of these passes Luhn. Scanning nadzor's own repository is where the
+// first two came from — go.mod, reported at high confidence.
+func TestExtract_TimestampIsNotACardPAN(t *testing.T) {
+	for _, text := range []string{
+		"github.com/shurcooL/graphql v0.0.0-20240915155400-7ee5256398cf",
+		"go4.org v0.0.0-20260112195520-a5071408f32f",
+		"migration_20240915155400_add_users.sql",
+		"20240915155400",
+	} {
+		// Guard the premise: if Luhn stopped passing, this test would be proving
+		// nothing.
+		if !ValidateLuhn(text) {
+			continue
+		}
+		for _, m := range Extract(text) {
+			if m.Kind == KindPAN {
+				t.Errorf("%q yielded card-pan %q", text, m.Value)
+			}
+		}
+	}
+}
+
+// The rule that replaces "Luhn is enough": an unbroken run must also start in a
+// recognized issuer range, because no network issues numbers starting 19 or 20.
+func TestExtract_UnbrokenPANNeedsAnIssuerRange(t *testing.T) {
+	// A Visa test number, Luhn-valid, issuer range 4.
+	if ms := Extract("cartao 4539578763621486"); len(ms) == 0 || ms[0].Kind != KindPAN {
+		t.Errorf("a Visa number was not found: %+v", kindsOf(ms))
+	}
+
+	// Luhn-valid, but 2024… is not an issuer range.
+	for _, m := range Extract("2024091515540061") {
+		if m.Kind == KindPAN {
+			t.Errorf("an unbroken run outside every issuer range was accepted: %q", m.Value)
+		}
+	}
+}
+
+// Grouping is exempt from the issuer-range rule, because the formatting is the
+// evidence: nobody writes a timestamp as "2024 0915 1554 00".
+func TestExtract_GroupedPANIsAcceptedWithoutAnIssuerRange(t *testing.T) {
+	// Luhn-valid and outside every issuer range, but written as a card.
+	const grouped = "2024 0915 1554 0061"
+	if !ValidateLuhn(grouped) {
+		t.Skip("the fixture no longer passes Luhn")
+	}
+	found := false
+	for _, m := range Extract("cartao " + grouped) {
+		if m.Kind == KindPAN {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("a grouped number was rejected for its issuer range")
+	}
+}
+
+// A fuzzer found this in under two seconds, and it is the worst class of false
+// positive this project can have.
+//
+// Every Brazilian phone number in E.164 form begins with 55, and 51 through 55
+// is the Mastercard issuer range. So a +55 number whose digits happen to
+// satisfy Luhn — about one in ten — was reported as a credit card. All 89 area
+// codes produce the same prefix, so this was not one unlucky number.
+//
+// The fix is that "+" is not a left boundary: a run of digits preceded by one
+// is a country code, not a document.
+func TestExtract_BrazilianPhoneIsNotACardPAN(t *testing.T) {
+	// The exact input the fuzzer minimized to, plus two more in the same shape.
+	for _, phone := range []string{"+5511980198775", "+5521987654321", "+5511999999994"} {
+		if !ValidateLuhn(phone[1:]) {
+			continue // only the Luhn-passing ones are at risk
+		}
+		if brand := DetectCardBrand(phone[1:]); brand == BrandUnknown {
+			t.Fatalf("the premise no longer holds: %s is outside every issuer range", phone)
+		}
+		for _, m := range Extract(phone) {
+			if m.Kind == KindPAN {
+				t.Errorf("%s yielded card-pan %q", phone, m.Value)
+			}
+		}
+	}
+}
+
+// The asymmetry is deliberate: a "+" after a document is ordinary — a URL, a
+// concatenation, a query string — so it must still count as a boundary there.
+func TestExtract_PlusAfterAValueIsStillABoundary(t *testing.T) {
+	for _, text := range []string{
+		"cpf=529.982.247-25+extra",
+		"529.982.247-25+",
+	} {
+		found := false
+		for _, m := range Extract(text) {
+			if m.Kind == KindCPF {
+				found = true
+			}
+		}
+		if !found {
+			t.Errorf("a CPF followed by %q was missed: %s", "+", text)
+		}
+	}
+}

@@ -66,7 +66,7 @@ func normalizeCNPJ(s string) string {
 	for _, r := range s {
 		switch {
 		case r >= '0' && r <= '9', r >= 'A' && r <= 'Z':
-			b.WriteByte(byte(r))
+			b.WriteByte(byte(r)) //#nosec G115 -- the case above bounds r to 0-9 and A-Z, which fit in a byte
 		case r >= 'a' && r <= 'z':
 			b.WriteByte(byte(r - 32))
 		}

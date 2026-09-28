@@ -135,7 +135,7 @@ func prepareDir(dir string) error {
 			return fmt.Errorf("daemon: creating %s: %w", dir, err)
 		}
 		// MkdirAll's mode is masked by umask, so it is set again explicitly.
-		if err := os.Chmod(dir, 0o700); err != nil { //nolint:gosec // G302 reads this as a file; dir is a directory, where 0700 is the restriction
+		if err := os.Chmod(dir, 0o700); err != nil { //#nosec G302 -- this is a directory, not a file: 0700 is the restriction, and it is asserted by TestListen_SocketAndDirectoryArePrivate
 			return fmt.Errorf("daemon: restricting %s: %w", dir, err)
 		}
 		return nil

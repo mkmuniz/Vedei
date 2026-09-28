@@ -16,20 +16,39 @@
 
 ## Estado
 
-**M3 concluído — já existe ferramenta funcionando para o caminho de agente.** O `nadzor hook` mantém segredos e dados pessoais fora do contexto do agente a **8,4 ms p95**, e o `nadzor transcript scan` reporta o que já chegou aos seus logs de sessão. Varredura de diretório e repositório, SARIF e a GitHub Action são do M4 — para CI hoje, use [betterleaks](https://github.com/betterleaks/betterleaks) ou [kingfisher](https://github.com/mongodb/kingfisher). O nadzor é construído sobre o primeiro.
+**M4 concluído — a CLI, o CI e o caminho de agente funcionam.** `nadzor scan`, `nadzor git` e `nadzor diff` reportam em tabela, JSON, JSONL ou SARIF; a GitHub Action publica no Code Scanning; o `nadzor hook` mantém segredos fora do contexto do agente a **8,4 ms p95**; `nadzor transcript scan` e `scrub` cuidam do que já vazou. A calibração multilíngue de falso positivo é o M5, e é o que mais tende a incomodar até lá — veja a nota abaixo do roadmap.
 
 ## Experimente
 
 ```bash
 go install github.com/mkmuniz/nadzor/cmd/nadzor@latest
 go install github.com/mkmuniz/nadzor/cmd/nadzor-hook@latest
+```
+
+```bash
+nadzor scan .                        # uma árvore, respeitando .gitignore
+nadzor scan . --format sarif -o nadzor.sarif
+nadzor git                           # o histórico, inclusive arquivos apagados
+nadzor diff --staged                 # o que está prestes a ser commitado
+nadzor transcript scan               # o que já vazou nos seus logs de sessão
 
 echo 'cpf 529.982.247-25' | nadzor stream
 # cpf ***.***.***-25 [nadzor: cpf redacted]   (exit 3)
-
-nadzor daemon &                      # mantém as regras compiladas
-nadzor transcript scan               # o que já vazou nos seus logs de sessão
 ```
+
+Os códigos de saída são distintos de propósito: **0** limpo, **3** achados, **1** a varredura em si falhou, e 1 tem precedência sobre 3. Um pipeline que não distingue vazamento de varredura quebrada vai ler erro de permissão como execução limpa.
+
+No CI:
+
+```yaml
+- uses: mkmuniz/nadzor@v1
+  with:
+    mode: diff          # só o que mudou; "history" num agendamento
+```
+
+## Silenciando o que é deliberado
+
+O `.nadzorignore` aceita o fingerprint do achado, derivado do tipo e do valor normalizado e **nunca da localização** — então a entrada sobrevive ao arquivo ser movido ou renomeado. O arquivo deste repositório é o [`.nadzorignore`](.nadzorignore): 71 achados, 21 fingerprints, cada um com o motivo escrito ao lado. Nada é silenciado por caminho, de propósito. Silenciar `*_test.go` inteiro também silenciaria uma credencial de verdade commitada num teste, que é um lugar onde credencial de verdade acaba indo.
 
 Depois ligue o hook no seu agente: [`hooks/`](hooks/). São dois binários, e é essa separação que deixa o hook rápido — o `nadzor` carrega 417 regras de segredo, o `nadzor-hook` tem 5 MB e só conversa com o daemon.
 
@@ -112,7 +131,7 @@ Registros completos em [`docs/adr/`](docs/adr/).
 | M1 | Detectores BR + validação offline | ✅ |
 | M2 | Motor de segredos via betterleaks | ✅ |
 | M3 | **MVP — superfície de IA** | ✅ |
-| M4 | CLI, CI/CD, SARIF, scrub de transcript | ⬜ |
+| M4 | CLI, CI/CD, SARIF, scrub de transcript | ✅ |
 | M5 | Corpus multilíngue + calibração pt-BR | ⬜ |
 | M6 | SDK de runtime | ⬜ |
 | M7 | Camada de IA | ⬜ |
@@ -132,10 +151,12 @@ detect/engine.go  # a interface Engine — isola a API v2 do betterleaks
 engine/secrets/   # betterleaks embrulhado atras dessa interface
 redact/           # tarja preservando formato
 report/           # JSON, JSONL, SARIF
+scan/             # caminhador de diretorio, matcher de gitignore, historico git
+report/           # tabela, JSON, JSONL, SARIF
 stream/           # stdin -> stdout, o caminho do MVP
 daemon/           # servidor e cliente do socket Unix — o caminho de 8,4 ms
 transcript/       # leitor de log de sessao de agente
-hooks/            # hooks do Claude Code e do Codex, units de launchd e systemd
+hooks/            # hooks de agente, hooks de git, units de launchd e systemd
 corpus/           # corpus multilingue de falso positivo
 ```
 

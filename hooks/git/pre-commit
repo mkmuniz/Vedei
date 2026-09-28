@@ -1,0 +1,48 @@
+#!/bin/sh
+# nadzor pre-commit hook: refuse a commit that adds a credential or a Brazilian
+# document number.
+#
+#   cp hooks/git/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+#
+# It scans the index, not the working tree. A secret you edited but did not stage
+# is not part of this commit, and blocking on it would be wrong.
+#
+# Exit codes are distinct on purpose: 3 means findings, 1 means the scan itself
+# failed. Both block the commit, and the message says which happened, because
+# "the scanner is broken" and "you are committing a key" need different fixes.
+
+set -u
+
+if ! command -v nadzor >/dev/null 2>&1; then
+    echo "nadzor: not on PATH; skipping the pre-commit scan" >&2
+    echo "  go install github.com/mkmuniz/nadzor/cmd/nadzor@latest" >&2
+    exit 0
+fi
+
+nadzor diff --staged --min-confidence "${NADZOR_MIN_CONFIDENCE:-medium}"
+status=$?
+
+case "$status" in
+    0)
+        exit 0
+        ;;
+    3)
+        cat >&2 <<'MSG'
+
+nadzor: the commit was blocked because the staged changes hold the values above.
+
+  Rotate any credential first — it is compromised whether or not it was pushed.
+  Then remove it, or record its fingerprint in .nadzorignore with a reason.
+
+  git commit --no-verify   to commit anyway
+MSG
+        exit 1
+        ;;
+    *)
+        echo "" >&2
+        echo "nadzor: the scan itself failed (exit $status), so nothing was checked." >&2
+        echo "  Fix that rather than assuming the commit is clean." >&2
+        echo "  git commit --no-verify   to commit anyway" >&2
+        exit 1
+        ;;
+esac

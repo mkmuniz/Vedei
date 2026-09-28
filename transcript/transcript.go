@@ -157,7 +157,7 @@ func (s *Scanner) ScanDir(ctx context.Context, agent Agent, dir string) (Report,
 
 // ScanFile audits one transcript.
 func (s *Scanner) ScanFile(ctx context.Context, agent Agent, path string) (Session, error) {
-	f, err := os.Open(path) //nolint:gosec // the path comes from the caller's own home directory
+	f, err := os.Open(path) //#nosec G304 -- read-only, on a transcript the caller named or that DefaultRoots found in their own home
 	if err != nil {
 		return Session{}, fmt.Errorf("opening %s: %w", path, err)
 	}

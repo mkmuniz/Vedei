@@ -15,11 +15,6 @@ linters:
     - revive
 
   settings:
-    gosec:
-      excludes:
-        # G115 (integer overflow on conversion) fires on every check-digit
-        # routine; those are bounded by construction and unit-tested.
-        - G115
     revive:
       rules:
         - name: exported

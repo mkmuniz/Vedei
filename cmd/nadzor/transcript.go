@@ -17,7 +17,7 @@ func newTranscriptCmd() *cobra.Command {
 		Use:   "transcript",
 		Short: "Audit coding-agent session logs",
 	}
-	cmd.AddCommand(newTranscriptScanCmd())
+	cmd.AddCommand(newTranscriptScanCmd(), newTranscriptScrubCmd())
 	return cmd
 }
 
