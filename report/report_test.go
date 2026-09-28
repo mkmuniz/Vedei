@@ -310,7 +310,9 @@ func TestWriteTable_CleanAndDirty(t *testing.T) {
 	dirty := write(t, report.FormatTable, sampleRun())
 	for _, want := range []string{
 		"SEVERITY", "cpf", "***.***.***-25", "src/a.txt:3", "(+1 more)",
-		"2 finding(s)", "1 finding(s) silenced by .nadzorignore",
+		// The file count is the files that held something, not the files read.
+		"2 finding(s)", "in 3 file(s); 12 scanned",
+		"1 finding(s) silenced by .nadzorignore",
 		"3 file(s) skipped", "permission denied",
 	} {
 		if !strings.Contains(dirty, want) {

@@ -51,8 +51,17 @@ func writeTable(w io.Writer, run Run) error {
 		parts = append(parts, fmt.Sprintf("%d %s", byType[t], t))
 	}
 
-	_, err := fmt.Fprintf(w, "\n%d finding(s) — %s — in %d file(s), %s scanned in %s\n",
-		len(run.Findings), strings.Join(parts, ", "), run.Scanned,
+	// "in N file(s)" counts the files that held something, not the files that
+	// were read. Conflating the two reads as though every file was a hit.
+	places := map[string]bool{}
+	for _, f := range run.Findings {
+		for _, loc := range f.Locations {
+			places[loc.Path] = true
+		}
+	}
+
+	_, err := fmt.Fprintf(w, "\n%d finding(s) — %s — in %d file(s); %d scanned, %s, %s\n",
+		len(run.Findings), strings.Join(parts, ", "), len(places), run.Scanned,
 		humanBytes(run.Bytes), run.Duration.Round(time.Millisecond))
 	if err != nil {
 		return fmt.Errorf("report: writing table: %w", err)
