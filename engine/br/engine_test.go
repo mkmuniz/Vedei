@@ -119,3 +119,47 @@ func TestScan_EmptyInput(t *testing.T) {
 
 // The engine must satisfy the interface it claims to.
 var _ detect.Engine = (*Engine)(nil)
+
+// The engine must never report two findings over the same bytes.
+//
+// Extract and ExtractPixKeys are separate passes, each with its own overlap
+// guard, so neither sees the other's matches. The redaction path rewrites by
+// byte offset and silently skips a span overlapping one already written, so an
+// overlap means whichever finding sorted second disappears — the output is
+// safe, but which one survived depends on sort order, and the report counts the
+// same value twice.
+func TestScan_NeverReportsOverlappingFindings(t *testing.T) {
+	texts := []string{
+		"chave pix do recebedor +5511980198775",
+		"cpf 529.982.247-25 e cnpj 11.222.333/0001-81",
+		"chave pix 529.982.247-25",
+		"pix f47ac10b-58cc-4372-a567-0e02b2c3d479 e cartao 4539 5787 6362 1486",
+	}
+
+	for _, text := range texts {
+		fs, err := New().Scan(context.Background(), []byte(text), detect.Metadata{})
+		if err != nil {
+			t.Fatalf("Scan(%q): %v", text, err)
+		}
+
+		type span struct {
+			start, end int
+			kind       string
+		}
+		var spans []span
+		for _, f := range fs {
+			for _, loc := range f.Locations {
+				spans = append(spans, span{loc.ByteStart, loc.ByteEnd, f.Type})
+			}
+		}
+		for i := range spans {
+			for j := i + 1; j < len(spans); j++ {
+				a, b := spans[i], spans[j]
+				if a.start < b.end && b.start < a.end {
+					t.Errorf("%q: %s [%d..%d] overlaps %s [%d..%d]",
+						text, a.kind, a.start, a.end, b.kind, b.start, b.end)
+				}
+			}
+		}
+	}
+}
