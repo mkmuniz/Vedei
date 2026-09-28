@@ -20,6 +20,12 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
       - run: go vet ./...
+      # The hook and daemon tests exercise real processes over a real socket,
+      # and skip themselves when the binaries are missing. Without this step
+      # they were silently skipped in CI, which is the failure mode they exist
+      # to catch.
+      - name: build the binaries the end-to-end tests need
+        run: make build
       - run: go test -race -coverprofile=coverage.out -covermode=atomic ./...
       - name: coverage
         run: go tool cover -func=coverage.out | tail -1
@@ -49,4 +55,6 @@ jobs:
       - env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
-        run: go build -trimpath -ldflags "-s -w" -o /dev/null ./cmd/nadzor
+        run: |
+          go build -trimpath -ldflags "-s -w" -o /dev/null ./cmd/nadzor
+          go build -trimpath -ldflags "-s -w" -o /dev/null ./cmd/nadzor-hook
