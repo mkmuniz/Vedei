@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/mkmuniz/nadzor/detect"
+	"github.com/mkmuniz/nadzor/stream"
 )
 
 // stripeKey is assembled at run time. Committing a Stripe-shaped key would
@@ -120,6 +121,49 @@ func TestBrazilianOnly_ExcludesSecrets(t *testing.T) {
 	for _, f := range fs {
 		if f.Engine == "secrets" {
 			t.Error("BrazilianOnly ran the secrets engine")
+		}
+	}
+}
+
+// The regression that matters most in this repository.
+//
+// Secret findings carried a line and a column but no byte offsets, so
+// stream.Processor had nothing to replace: every credential was announced on
+// stderr as redacted and handed to the model anyway. Reporting a leak and
+// causing it are not the same thing, and only a test at this layer — the real
+// engine set behind the real processor — can tell them apart.
+func TestOffline_SecretsAreRemovedFromTheText(t *testing.T) {
+	content, err := fixture()
+	if err != nil {
+		t.Fatalf("fixture: %v", err)
+	}
+
+	p, err := stream.New(Offline())
+	if err != nil {
+		t.Fatalf("stream.New: %v", err)
+	}
+
+	out, res := p.Process(context.Background(), string(content), detect.Metadata{Path: "misto.txt"})
+	if res.Degraded {
+		t.Fatalf("degraded: %v", res.Err)
+	}
+	if !res.Redacted {
+		t.Fatal("nothing was redacted")
+	}
+	if strings.Contains(out, stripeKey) {
+		t.Errorf("the secret survived redaction:\n%s", out)
+	}
+
+	// Findings are only actionable if they point somewhere.
+	for _, f := range res.Findings {
+		if len(f.Locations) == 0 {
+			t.Errorf("%s (%s) has no locations", f.Type, f.Engine)
+			continue
+		}
+		for _, loc := range f.Locations {
+			if loc.ByteEnd <= loc.ByteStart {
+				t.Errorf("%s (%s): empty range %d..%d", f.Type, f.Engine, loc.ByteStart, loc.ByteEnd)
+			}
 		}
 	}
 }
