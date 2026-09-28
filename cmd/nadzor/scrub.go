@@ -197,7 +197,7 @@ func scrubRoots(path string) (map[transcript.Agent]string, error) {
 		}
 		return roots, nil
 	}
-	if _, err := os.Stat(path); err != nil {
+	if _, err := os.Lstat(path); err != nil {
 		return nil, fmt.Errorf("%s: %w", path, err)
 	}
 	return map[transcript.Agent]string{transcript.Agent("custom"): path}, nil
@@ -209,7 +209,7 @@ func transcriptFiles(roots map[transcript.Agent]string) ([]transcriptFile, error
 	var out []transcriptFile
 
 	for agent, root := range roots {
-		info, err := os.Stat(root)
+		info, err := os.Lstat(root)
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", root, err)
 		}
@@ -223,6 +223,13 @@ func transcriptFiles(roots map[transcript.Agent]string) ([]transcriptFile, error
 				return err
 			}
 			if d.IsDir() || !strings.HasSuffix(d.Name(), ".jsonl") {
+				return nil
+			}
+			// A symlink is skipped rather than followed. Rewriting through one
+			// would replace the link with a file and leave the value in the
+			// target, while reporting it removed.
+			if d.Type()&os.ModeSymlink != 0 {
+				_, _ = fmt.Fprintf(os.Stderr, "nadzor: skipping %s: it is a symlink\n", p)
 				return nil
 			}
 			// A backup still holds the values, so scrubbing one is pointless and

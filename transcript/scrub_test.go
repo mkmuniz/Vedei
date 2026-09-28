@@ -424,3 +424,41 @@ func TestScrub_FindingsCarryLineNumbers(t *testing.T) {
 		t.Errorf("the agent was not recorded: %v", res.Findings[0].Extra)
 	}
 }
+
+// Pointed at a symlink, scrub used to stat the target, rewrite, and rename over
+// the link — destroying the link, leaving the value in the target, and
+// reporting "1 value removed". A tool that says it closed a leak and did not is
+// worse than one that says nothing.
+func TestScrub_RefusesToFollowASymlink(t *testing.T) {
+	dir := t.TempDir()
+	target := filepath.Join(dir, "real.jsonl")
+	link := filepath.Join(dir, "link.jsonl")
+
+	const body = `{"content":"cpf ` + scrubCPF + `"}` + "\n"
+	if err := os.WriteFile(target, []byte(body), 0o600); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	if err := os.Symlink(target, link); err != nil {
+		t.Skipf("symlinks unavailable: %v", err)
+	}
+
+	_, err := scrubber(t).Scrub(context.Background(), transcript.AgentClaudeCode, link,
+		transcript.ScrubOptions{})
+	if err == nil {
+		t.Fatal("scrubbing through a symlink was allowed")
+	}
+	if !strings.Contains(err.Error(), "not a regular file") {
+		t.Errorf("error = %v, want it to name the reason", err)
+	}
+
+	if got := read(t, target); got != body {
+		t.Errorf("the target was modified:\n got %q\nwant %q", got, body)
+	}
+	info, err := os.Lstat(link)
+	if err != nil {
+		t.Fatalf("Lstat: %v", err)
+	}
+	if info.Mode()&os.ModeSymlink == 0 {
+		t.Error("the symlink was replaced by a regular file")
+	}
+}

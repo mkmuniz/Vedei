@@ -89,9 +89,21 @@ func (s *Scanner) Scrub(ctx context.Context, agent Agent, path string, opts Scru
 		return res, nil
 	}
 
-	info, err := os.Stat(path)
+	// Lstat, not Stat, and a regular-file check.
+	//
+	// The rename at the end replaces whatever sits at this path. Pointed at a
+	// symlink, Stat would report the target's mode, the rename would destroy
+	// the link, and the value the command reported as removed would still be
+	// in the target — the tool claiming a leak was closed when it was not.
+	// gosec flagged the open as path-traversal-shaped; this is what was behind
+	// it.
+	info, err := os.Lstat(path)
 	if err != nil {
 		return res, fmt.Errorf("stat %s: %w", path, err)
+	}
+	if !info.Mode().IsRegular() {
+		return res, fmt.Errorf("%s is not a regular file (%s); "+
+			"scrub rewrites in place and will not follow it", path, info.Mode().Type())
 	}
 
 	if !opts.NoBackup {
@@ -188,7 +200,7 @@ func (s *Scanner) rewrite(ctx context.Context, agent Agent, path string, w io.Wr
 ) (ScrubResult, error) {
 	res := ScrubResult{Path: path}
 
-	f, err := os.Open(path) //nolint:gosec // the caller names the transcript
+	f, err := os.Open(path) //#nosec G304 -- read-only, on the transcript the caller named
 	if err != nil {
 		return res, fmt.Errorf("opening %s: %w", path, err)
 	}
@@ -262,6 +274,20 @@ func scrubRecord(line []byte, redact redactor) ([]byte, []detect.Finding, error)
 		return line, nil, nil
 	}
 
+	// The whole line has to be valid JSON before the token walk starts.
+	//
+	// Checking afterwards is not equivalent, and a fuzzer proved it: "0}" made
+	// the decoder read 0 as a complete value and report nothing further, so the
+	// record was rewritten as "0" and the brace was dropped. Silently
+	// truncating a record is the worst thing this function can do, since the
+	// original is then gone. json.Valid answers the question the walk assumes.
+	if !json.Valid(line) {
+		// A record that was not JSON keeps its values replaced as plain text,
+		// and stays malformed rather than being dropped.
+		replaced, plainFound, _ := redact(string(line))
+		return []byte(replaced), plainFound, nil
+	}
+
 	dec := json.NewDecoder(bytes.NewReader(line))
 	dec.UseNumber()
 
@@ -269,14 +295,13 @@ func scrubRecord(line []byte, redact redactor) ([]byte, []detect.Finding, error)
 	out.Grow(len(line) + 64)
 
 	found, err := emitValue(dec, &out, redact, 0)
-	if err == nil && !dec.More() {
-		return out.Bytes(), found, nil
+	if err != nil {
+		// json.Valid said yes, so this is the depth bound, not a parse error.
+		// Leaving the record untouched is right: it is better to carry a value
+		// nadzor could not reach than to write a record it could not rebuild.
+		return line, nil, fmt.Errorf("rewriting a record: %w", err)
 	}
-	// Either it is not JSON, or there were trailing tokens and this was not a
-	// single document. Either way it is treated as plain text rather than
-	// emitting the first value and losing the rest.
-	replaced, plainFound, _ := redact(string(line))
-	return []byte(replaced), plainFound, nil
+	return out.Bytes(), found, nil
 }
 
 // emitValue copies one JSON value from dec to out, rewriting strings.
@@ -404,13 +429,13 @@ func writeJSONString(out *bytes.Buffer, s string) error {
 func backupFile(path string, mode os.FileMode) (string, error) {
 	name := fmt.Sprintf("%s.nadzor-backup-%s", path, time.Now().UTC().Format("20060102T150405Z"))
 
-	src, err := os.Open(path) //nolint:gosec // the caller names the transcript
+	src, err := os.Open(path) //#nosec G304 -- read-only, the file about to be rewritten; Scrub has already refused anything but a regular file
 	if err != nil {
 		return "", fmt.Errorf("opening %s: %w", path, err)
 	}
 	defer func() { _ = src.Close() }()
 
-	dst, err := os.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_EXCL, mode) //nolint:gosec // name is derived from the caller's path
+	dst, err := os.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_EXCL, mode) //#nosec G304 -- name is the transcript's own path plus a timestamp, and O_EXCL refuses to follow or overwrite anything already there
 	if err != nil {
 		return "", fmt.Errorf("creating %s: %w", name, err)
 	}
@@ -444,7 +469,7 @@ func backupFile(path string, mode os.FileMode) (string, error) {
 }
 
 func hashFile(path string) (string, error) {
-	f, err := os.Open(path) //nolint:gosec // an internal path this package just wrote
+	f, err := os.Open(path) //#nosec G304 -- a path this package created moments ago
 	if err != nil {
 		return "", fmt.Errorf("opening %s: %w", path, err)
 	}
@@ -463,7 +488,7 @@ func hashFile(path string) (string, error) {
 // JSON. This runs before the rename, so a failure here leaves the original
 // untouched — the whole point of writing beside it rather than in place.
 func verifyScrubbed(path string, wantLines int) error {
-	f, err := os.Open(path) //nolint:gosec // an internal path this package just wrote
+	f, err := os.Open(path) //#nosec G304 -- a path this package created moments ago
 	if err != nil {
 		return fmt.Errorf("opening the rewritten file: %w", err)
 	}
