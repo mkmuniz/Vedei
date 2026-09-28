@@ -27,7 +27,7 @@ Exit codes: 0 clean, 3 findings, 1 error.`,
 		Version:       version,
 	}
 
-	root.AddCommand(newStreamCmd(), newTranscriptCmd(), newHookCmd(), newDaemonCmd())
+	root.AddCommand(newScanCmd(), newStreamCmd(), newTranscriptCmd(), newHookCmd(), newDaemonCmd())
 	return root
 }
 
