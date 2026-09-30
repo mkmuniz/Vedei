@@ -1,12 +1,12 @@
 <div align="center">
 
-<img src="assets/nadzor-logo.svg" width="600" alt="nadzor — o que não deve sair, não sai">
+<img src="assets/vedei-logo.svg" width="600" alt="vedei — o que não deve sair, não sai">
 
 **Encontra e valida dados sensíveis brasileiros e segredos vazados — offline, por dígito verificador, antes de chegarem ao seu log, ao seu CI ou ao contexto do seu agente de IA.**
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Go](https://img.shields.io/badge/go-1.27-00ADD8.svg)](go.mod)
-[![CI](https://github.com/mkmuniz/nadzor/actions/workflows/ci.yml/badge.svg)](https://github.com/mkmuniz/nadzor/actions/workflows/ci.yml)
+[![CI](https://github.com/mkmuniz/vedei/actions/workflows/ci.yml/badge.svg)](https://github.com/mkmuniz/vedei/actions/workflows/ci.yml)
 
 [English](README.md)
 
@@ -16,24 +16,24 @@
 
 ## Estado
 
-**M4 concluído — a CLI, o CI e o caminho de agente funcionam.** `nadzor scan`, `nadzor git` e `nadzor diff` reportam em tabela, JSON, JSONL ou SARIF; a GitHub Action publica no Code Scanning; o `nadzor hook` mantém segredos fora do contexto do agente a **8,4 ms p95**; `nadzor transcript scan` e `scrub` cuidam do que já vazou. A calibração multilíngue de falso positivo é o M5, e é o que mais tende a incomodar até lá — veja a nota abaixo do roadmap.
+**M4 concluído — a CLI, o CI e o caminho de agente funcionam.** `vedei scan`, `vedei git` e `vedei diff` reportam em tabela, JSON, JSONL ou SARIF; a GitHub Action publica no Code Scanning; o `vedei hook` mantém segredos fora do contexto do agente a **8,4 ms p95**; `vedei transcript scan` e `scrub` cuidam do que já vazou. A calibração multilíngue de falso positivo é o M5, e é o que mais tende a incomodar até lá — veja a nota abaixo do roadmap.
 
 ## Experimente
 
 ```bash
-go install github.com/mkmuniz/nadzor/cmd/nadzor@latest
-go install github.com/mkmuniz/nadzor/cmd/nadzor-hook@latest
+go install github.com/mkmuniz/vedei/cmd/vedei@latest
+go install github.com/mkmuniz/vedei/cmd/vedei-hook@latest
 ```
 
 ```bash
-nadzor scan .                        # uma árvore, respeitando .gitignore
-nadzor scan . --format sarif -o nadzor.sarif
-nadzor git                           # o histórico, inclusive arquivos apagados
-nadzor diff --staged                 # o que está prestes a ser commitado
-nadzor transcript scan               # o que já vazou nos seus logs de sessão
+vedei scan .                        # uma árvore, respeitando .gitignore
+vedei scan . --format sarif -o vedei.sarif
+vedei git                           # o histórico, inclusive arquivos apagados
+vedei diff --staged                 # o que está prestes a ser commitado
+vedei transcript scan               # o que já vazou nos seus logs de sessão
 
-echo 'cpf 529.982.247-25' | nadzor stream
-# cpf ***.***.***-25 [nadzor: cpf redacted]   (exit 3)
+echo 'cpf 529.982.247-25' | vedei stream
+# cpf ***.***.***-25 [vedei: cpf redacted]   (exit 3)
 ```
 
 Os códigos de saída são distintos de propósito: **0** limpo, **3** achados, **1** a varredura em si falhou, e 1 tem precedência sobre 3. Um pipeline que não distingue vazamento de varredura quebrada vai ler erro de permissão como execução limpa.
@@ -41,16 +41,16 @@ Os códigos de saída são distintos de propósito: **0** limpo, **3** achados, 
 No CI:
 
 ```yaml
-- uses: mkmuniz/nadzor@v1
+- uses: mkmuniz/vedei@v1
   with:
     mode: diff          # só o que mudou; "history" num agendamento
 ```
 
 ## Silenciando o que é deliberado
 
-O `.nadzorignore` aceita o fingerprint do achado, derivado do tipo e do valor normalizado e **nunca da localização** — então a entrada sobrevive ao arquivo ser movido ou renomeado. O arquivo deste repositório é o [`.nadzorignore`](.nadzorignore): 71 achados, 21 fingerprints, cada um com o motivo escrito ao lado. Nada é silenciado por caminho, de propósito. Silenciar `*_test.go` inteiro também silenciaria uma credencial de verdade commitada num teste, que é um lugar onde credencial de verdade acaba indo.
+O `.vedeiignore` aceita o fingerprint do achado, derivado do tipo e do valor normalizado e **nunca da localização** — então a entrada sobrevive ao arquivo ser movido ou renomeado. O arquivo deste repositório é o [`.vedeiignore`](.vedeiignore): 71 achados, 21 fingerprints, cada um com o motivo escrito ao lado. Nada é silenciado por caminho, de propósito. Silenciar `*_test.go` inteiro também silenciaria uma credencial de verdade commitada num teste, que é um lugar onde credencial de verdade acaba indo.
 
-Depois ligue o hook no seu agente: [`hooks/`](hooks/). São dois binários, e é essa separação que deixa o hook rápido — o `nadzor` carrega 417 regras de segredo, o `nadzor-hook` tem 5 MB e só conversa com o daemon.
+Depois ligue o hook no seu agente: [`hooks/`](hooks/). São dois binários, e é essa separação que deixa o hook rápido — o `vedei` carrega 417 regras de segredo, o `vedei-hook` tem 5 MB e só conversa com o daemon.
 
 ## O que detecta
 
@@ -87,7 +87,7 @@ Base de ISPB do [`guibranco/BancosBrasileiros`](https://github.com/guibranco/Ban
 
 ## Por que existe
 
-Detecção de segredo é problema resolvido e concorrido — betterleaks tem 463 regras, kingfisher 1.051. Reconstruir esse corpus é perder. Então o nadzor **importa o betterleaks** (MIT) e gasta tudo no que ninguém construiu: **dado sensível brasileiro**. Nenhuma ferramenta open source mantida detecta CPF, CNPJ, CNH, chave Pix, PAN e E2EID. Não é mal servido — é vazio.
+Detecção de segredo é problema resolvido e concorrido — betterleaks tem 463 regras, kingfisher 1.051. Reconstruir esse corpus é perder. Então o vedei **importa o betterleaks** (MIT) e gasta tudo no que ninguém construiu: **dado sensível brasileiro**. Nenhuma ferramenta open source mantida detecta CPF, CNPJ, CNH, chave Pix, PAN e E2EID. Não é mal servido — é vazio.
 
 A segunda razão é arquitetural. O betterleaks valida segredo perguntando ao provedor por HTTP, o que exige rate limiter, orçamento de timeout e cuidado com o destino das requisições. Dado pessoal brasileiro não funciona assim: CPF é módulo 11, cartão é Luhn, chave Pix é o tipo dela. **Tudo offline.** Sem rede, sem limite de vazão, sem superfície de SSRF. Mais simples e mais seguro, não só diferente.
 
@@ -95,7 +95,7 @@ A segunda razão é arquitetural. O betterleaks valida segredo perguntando ao pr
 
 Um `.env` tem proteções — gitignore, permissão de arquivo, cofre. O `~/.claude/projects/*.jsonl` não tem nenhuma: texto puro, sem criptografia, sem rotação, sem expiração, sem ferramenta de segurança vigiando. Quem lê o disco — malware, notebook roubado, backup exfiltrado — lê todo segredo que o agente já tocou.
 
-O nadzor reduz o que entra ali e mostra o que já entrou. Não substitui criptografia de disco.
+O vedei reduz o que entra ali e mostra o que já entrou. Não substitui criptografia de disco.
 
 Documentado no próprio repositório do Claude Code: [#44868](https://github.com/anthropics/claude-code/issues/44868), [#50014](https://github.com/anthropics/claude-code/issues/50014), [#95680](https://github.com/anthropics/claude-code/issues/95680).
 
@@ -109,7 +109,7 @@ Documentado no próprio repositório do Claude Code: [#44868](https://github.com
 | Latência | 50–500 ms | microssegundos |
 | Próximo passo | revogar / rotacionar | tarjar / remover |
 
-**A linha que o nadzor não atravessa:** dado pessoal é validado pela *estrutura*, nunca consultando base oficial. O nadzor diz que `123.456.789-09` é um CPF estruturalmente válido. Nunca de quem.
+**A linha que o vedei não atravessa:** dado pessoal é validado pela *estrutura*, nunca consultando base oficial. O vedei diz que `123.456.789-09` é um CPF estruturalmente válido. Nunca de quem.
 
 ## Princípios de projeto (inegociáveis)
 
@@ -162,7 +162,7 @@ corpus/           # corpus multilingue de falso positivo
 
 ## O nome
 
-**Надзор** (*nadzor*) é "supervisão" ou "fiscalização" em russo — a palavra usada para supervisão regulatória. É `dozor` (a ronda) com o prefixo `nad-` (sobre, acima).
+**Надзор** (*vedei*) é "supervisão" ou "fiscalização" em russo — a palavra usada para supervisão regulatória. É `dozor` (a ronda) com o prefixo `nad-` (sobre, acima).
 
 Uma ferramenta que inspeciona o que passa por uma fronteira e aplica uma regra sobre isso não é um guarda. É fiscalização.
 

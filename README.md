@@ -1,12 +1,12 @@
 <div align="center">
 
-<img src="assets/nadzor-logo.svg" width="600" alt="nadzor — what shouldn't leave, doesn't">
+<img src="assets/vedei-logo.svg" width="600" alt="vedei — what shouldn't leave, doesn't">
 
 **Finds and validates Brazilian sensitive data and leaked secrets — offline, with check digits, before they reach your logs, your CI, or your AI agent's context.**
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Go](https://img.shields.io/badge/go-1.27-00ADD8.svg)](go.mod)
-[![CI](https://github.com/mkmuniz/nadzor/actions/workflows/ci.yml/badge.svg)](https://github.com/mkmuniz/nadzor/actions/workflows/ci.yml)
+[![CI](https://github.com/mkmuniz/vedei/actions/workflows/ci.yml/badge.svg)](https://github.com/mkmuniz/vedei/actions/workflows/ci.yml)
 [![Status](https://img.shields.io/badge/status-early%20development-orange.svg)](#status)
 
 [Português](README.pt-BR.md)
@@ -17,24 +17,24 @@
 
 ## Status
 
-**M4 done — the CLI, CI and the agent path all work.** `nadzor scan`, `nadzor git` and `nadzor diff` report to table, JSON, JSONL or SARIF; the GitHub Action uploads to Code Scanning; `nadzor hook` keeps secrets out of a coding agent's context at **8.4 ms p95**; `nadzor transcript scan` and `scrub` handle what already leaked. Multilingual false-positive calibration is M5, and it is the thing most likely to annoy you before then — see the note under the roadmap.
+**M4 done — the CLI, CI and the agent path all work.** `vedei scan`, `vedei git` and `vedei diff` report to table, JSON, JSONL or SARIF; the GitHub Action uploads to Code Scanning; `vedei hook` keeps secrets out of a coding agent's context at **8.4 ms p95**; `vedei transcript scan` and `scrub` handle what already leaked. Multilingual false-positive calibration is M5, and it is the thing most likely to annoy you before then — see the note under the roadmap.
 
 ## Try it
 
 ```bash
-go install github.com/mkmuniz/nadzor/cmd/nadzor@latest
-go install github.com/mkmuniz/nadzor/cmd/nadzor-hook@latest
+go install github.com/mkmuniz/vedei/cmd/vedei@latest
+go install github.com/mkmuniz/vedei/cmd/vedei-hook@latest
 ```
 
 ```bash
-nadzor scan .                        # a tree, honouring .gitignore
-nadzor scan . --format sarif -o nadzor.sarif
-nadzor git                           # the history, including deleted files
-nadzor diff --staged                 # what is about to be committed
-nadzor transcript scan               # what already leaked into your session logs
+vedei scan .                        # a tree, honouring .gitignore
+vedei scan . --format sarif -o vedei.sarif
+vedei git                           # the history, including deleted files
+vedei diff --staged                 # what is about to be committed
+vedei transcript scan               # what already leaked into your session logs
 
-echo 'cpf 529.982.247-25' | nadzor stream
-# cpf ***.***.***-25 [nadzor: cpf redacted]   (exit 3)
+echo 'cpf 529.982.247-25' | vedei stream
+# cpf ***.***.***-25 [vedei: cpf redacted]   (exit 3)
 ```
 
 Exit codes are distinct on purpose: **0** clean, **3** findings, **1** the scan itself failed, with 1 outranking 3. A pipeline that cannot tell a leak from a broken scan will read a permission error as a clean run.
@@ -42,16 +42,16 @@ Exit codes are distinct on purpose: **0** clean, **3** findings, **1** the scan 
 In CI:
 
 ```yaml
-- uses: mkmuniz/nadzor@v1
+- uses: mkmuniz/vedei@v1
   with:
     mode: diff          # only what changed; "history" on a schedule
 ```
 
-Wire the hook into your agent: [`hooks/`](hooks/). Two binaries, because the split is what makes the hook fast — `nadzor` carries 417 secret rules, `nadzor-hook` is 5 MB and only talks to the daemon.
+Wire the hook into your agent: [`hooks/`](hooks/). Two binaries, because the split is what makes the hook fast — `vedei` carries 417 secret rules, `vedei-hook` is 5 MB and only talks to the daemon.
 
 ## Silencing what is deliberate
 
-`.nadzorignore` takes a finding fingerprint, derived from the type and the normalized value and **never from the location** — so an entry survives the file being moved or renamed. This repository's own file is [`.nadzorignore`](.nadzorignore): 71 findings, 21 fingerprints, each with the reason written next to it. Nothing is silenced by path, on purpose. Silencing `*_test.go` wholesale would also silence a credential genuinely committed into a test, which is a place credentials genuinely end up.
+`.vedeiignore` takes a finding fingerprint, derived from the type and the normalized value and **never from the location** — so an entry survives the file being moved or renamed. This repository's own file is [`.vedeiignore`](.vedeiignore): 71 findings, 21 fingerprints, each with the reason written next to it. Nothing is silenced by path, on purpose. Silencing `*_test.go` wholesale would also silence a credential genuinely committed into a test, which is a place credentials genuinely end up.
 
 ## What it detects
 
@@ -88,7 +88,7 @@ ISPB registry from [`guibranco/BancosBrasileiros`](https://github.com/guibranco/
 
 ## Why it exists
 
-Secret scanning is solved and crowded — betterleaks ships 463 rules, kingfisher 1,051. Rebuilding that corpus loses. So nadzor **imports betterleaks** (MIT) and spends everything on what nobody built: **Brazilian sensitive data**. No maintained open-source tool detects CPF, CNPJ, CNH, Pix keys, card PANs and E2EIDs. Not underserved — empty.
+Secret scanning is solved and crowded — betterleaks ships 463 rules, kingfisher 1,051. Rebuilding that corpus loses. So vedei **imports betterleaks** (MIT) and spends everything on what nobody built: **Brazilian sensitive data**. No maintained open-source tool detects CPF, CNPJ, CNH, Pix keys, card PANs and E2EIDs. Not underserved — empty.
 
 The second reason is architectural. betterleaks validates a secret by asking the provider over HTTP, which needs a rate limiter, a timeout budget, and care about where those requests go. Brazilian personal data doesn't work that way: a CPF is a mod-11 check digit, a card is Luhn, a Pix key is its type. **All offline.** No network, no rate limits, no SSRF surface. Simpler and safer, not just different.
 
@@ -96,7 +96,7 @@ The second reason is architectural. betterleaks validates a secret by asking the
 
 A `.env` has protections — gitignore, file permissions, a vault. `~/.claude/projects/*.jsonl` has none: plaintext, no encryption, no rotation, no expiry, no security tool watching it. Whoever reads the disk — malware, a stolen laptop, an exfiltrated backup — reads every secret the agent ever touched.
 
-nadzor reduces what lands there and shows what already did. It does not replace disk encryption.
+vedei reduces what lands there and shows what already did. It does not replace disk encryption.
 
 Documented upstream: [#44868](https://github.com/anthropics/claude-code/issues/44868), [#50014](https://github.com/anthropics/claude-code/issues/50014), [#95680](https://github.com/anthropics/claude-code/issues/95680).
 
@@ -110,7 +110,7 @@ Documented upstream: [#44868](https://github.com/anthropics/claude-code/issues/4
 | Latency | 50–500 ms | microseconds |
 | Next step | revoke / rotate | redact / remove |
 
-**The line nadzor will not cross:** personal data is validated for *structure*, never by querying an official registry. nadzor says `123.456.789-09` is a structurally valid CPF. Never whose.
+**The line vedei will not cross:** personal data is validated for *structure*, never by querying an official registry. vedei says `123.456.789-09` is a structurally valid CPF. Never whose.
 
 ## Design principles (non-negotiable)
 
@@ -163,7 +163,7 @@ corpus/           # multilingual false-positive corpus
 
 ## The name
 
-**Надзор** (*nadzor*) is Russian for *oversight* — the word used for regulatory supervision. It is `dozor` (the watch) with the prefix `nad-` (over, above).
+**Надзор** (*vedei*) is Russian for *oversight* — the word used for regulatory supervision. It is `dozor` (the watch) with the prefix `nad-` (over, above).
 
 A tool that inspects what passes a boundary and enforces a rule about it is not a guard. It is oversight.
 
