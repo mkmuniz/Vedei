@@ -1,6 +1,6 @@
-# nadzor scanning itself. A security tool that is not run against its own
+# vedei scanning itself. A security tool that is not run against its own
 # repository is making a claim it has not tested.
-name: nadzor
+name: vedei
 
 on:
   push:
@@ -32,7 +32,7 @@ jobs:
         with:
           go-version: "1.27"
 
-      - name: Build nadzor from this checkout
+      - name: Build vedei from this checkout
         run: |
           make build
           echo "$PWD/bin" >> "$GITHUB_PATH"
@@ -44,7 +44,7 @@ jobs:
           mode: ${{ github.event_name == 'schedule' && 'history' || 'diff' }}
           # The repository holds test fixtures with valid check digits by design,
           # so findings are reported to the Security tab rather than failing the
-          # build. .nadzorignore is what silences the ones that are deliberate.
+          # build. .vedeiignore is what silences the ones that are deliberate.
           fail-on-findings: "false"
           # A pull request from a fork gets a read-only token, so the upload
           # would fail on something the contributor cannot fix.
