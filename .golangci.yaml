@@ -2,7 +2,7 @@ version: "2"
 
 linters:
   enable:
-    - gosec          # nadzor is a security tool; it passes a security linter
+    - gosec          # vedei is a security tool; it passes a security linter
     - errcheck
     - govet
     - ineffassign

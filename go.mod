@@ -1,4 +1,4 @@
-module github.com/mkmuniz/nadzor
+module github.com/mkmuniz/vedei
 
 go 1.27.1
 

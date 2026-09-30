@@ -20,20 +20,20 @@ const (
 
 // bins locates the built binaries, skipping the suite when they are missing:
 // these tests are about the pair of processes, not about the packages.
-func bins(t *testing.T) (nadzor, hook string) {
+func bins(t *testing.T) (vedei, hook string) {
 	t.Helper()
 	root, err := filepath.Abs("../..")
 	if err != nil {
 		t.Fatalf("Abs: %v", err)
 	}
-	nadzor = filepath.Join(root, "bin", "nadzor")
-	hook = filepath.Join(root, "bin", "nadzor-hook")
-	for _, b := range []string{nadzor, hook} {
+	vedei = filepath.Join(root, "bin", "vedei")
+	hook = filepath.Join(root, "bin", "vedei-hook")
+	for _, b := range []string{vedei, hook} {
 		if _, err := os.Stat(b); err != nil {
 			t.Skip("binaries not built; run make build")
 		}
 	}
-	return nadzor, hook
+	return vedei, hook
 }
 
 // shortSocket returns a socket path under the length the kernel allows, which
@@ -49,11 +49,11 @@ func shortSocket(t *testing.T) string {
 }
 
 // startDaemon runs the real daemon process and waits for it to answer.
-func startDaemon(t *testing.T, nadzor, socket string) {
+func startDaemon(t *testing.T, vedei, socket string) {
 	t.Helper()
 
 	ctx, cancel := context.WithCancel(context.Background())
-	cmd := exec.CommandContext(ctx, nadzor, "daemon", "--socket", socket) //nolint:gosec // built binary
+	cmd := exec.CommandContext(ctx, vedei, "daemon", "--socket", socket) //nolint:gosec // built binary
 	var logs bytes.Buffer
 	cmd.Stderr = &logs
 	if err := cmd.Start(); err != nil {
@@ -70,7 +70,7 @@ func startDaemon(t *testing.T, nadzor, socket string) {
 
 	deadline := time.Now().Add(20 * time.Second)
 	for time.Now().Before(deadline) {
-		out, err := exec.CommandContext(ctx, nadzor, "daemon", "status", "--socket", socket).CombinedOutput() //nolint:gosec // built binary
+		out, err := exec.CommandContext(ctx, vedei, "daemon", "status", "--socket", socket).CombinedOutput() //nolint:gosec // built binary
 		if err == nil {
 			return
 		}
@@ -102,15 +102,15 @@ func event(text string) string {
 }
 
 func TestHookClient_RedactsThroughTheDaemon(t *testing.T) {
-	nadzor, hook := bins(t)
+	vedei, hook := bins(t)
 	socket := shortSocket(t)
-	startDaemon(t, nadzor, socket)
+	startDaemon(t, vedei, socket)
 
 	out := runHook(t, hook, event("cpf "+testCPF+" fim"), "--socket", socket)
 	if strings.Contains(out, testCPF) {
 		t.Fatalf("the value reached the model: %s", out)
 	}
-	if !strings.Contains(out, "nadzor: cpf redacted") {
+	if !strings.Contains(out, "vedei: cpf redacted") {
 		t.Fatalf("no redaction marker: %s", out)
 	}
 
@@ -124,9 +124,9 @@ func TestHookClient_RedactsThroughTheDaemon(t *testing.T) {
 }
 
 func TestHookClient_CleanEventIsUnchanged(t *testing.T) {
-	nadzor, hook := bins(t)
+	vedei, hook := bins(t)
 	socket := shortSocket(t)
-	startDaemon(t, nadzor, socket)
+	startDaemon(t, vedei, socket)
 
 	in := event("nada sensivel aqui")
 	if out := runHook(t, hook, in, "--socket", socket); out != in {
@@ -137,10 +137,10 @@ func TestHookClient_CleanEventIsUnchanged(t *testing.T) {
 // Without a daemon the client execs the full binary. The redaction still has
 // to happen — slower, but not skipped.
 func TestHookClient_FallsBackToTheFullBinary(t *testing.T) {
-	nadzor, hook := bins(t)
+	vedei, hook := bins(t)
 
 	out := runHook(t, hook, event("cpf "+testCPF),
-		"--socket", shortSocket(t), "--fallback", nadzor)
+		"--socket", shortSocket(t), "--fallback", vedei)
 	if strings.Contains(out, testCPF) {
 		t.Fatalf("the fallback did not redact: %s", out)
 	}
@@ -159,9 +159,9 @@ func TestHookClient_PassesThroughWithNothingAvailable(t *testing.T) {
 }
 
 func TestHookClient_FailsOpenOnMalformedInput(t *testing.T) {
-	nadzor, hook := bins(t)
+	vedei, hook := bins(t)
 	socket := shortSocket(t)
-	startDaemon(t, nadzor, socket)
+	startDaemon(t, vedei, socket)
 
 	for _, in := range []string{`{not json`, `["a"]`, `{"other":"x"}`, `{"tool_response":{"a":1}}`, ``} {
 		if out := runHook(t, hook, in, "--socket", socket); out != in {
@@ -180,9 +180,9 @@ func TestHookLatency(t *testing.T) {
 	if testing.Short() {
 		t.Skip("measures process latency; skipped under -short")
 	}
-	nadzor, hook := bins(t)
+	vedei, hook := bins(t)
 	socket := shortSocket(t)
-	startDaemon(t, nadzor, socket)
+	startDaemon(t, vedei, socket)
 
 	in := event("cpf " + testCPF + " e uma chave AKIAIOSFODNN7EXAMPLE fim")
 	const runs = 40
@@ -206,10 +206,10 @@ func TestHookLatency(t *testing.T) {
 	}
 
 	viaDaemon := measure(hook, "--socket", socket)
-	inProcess := measure(nadzor, "hook", "--no-daemon")
+	inProcess := measure(vedei, "hook", "--no-daemon")
 
-	t.Logf("p95 nadzor-hook via daemon: %v", viaDaemon.Round(10*time.Microsecond))
-	t.Logf("p95 nadzor hook in-process: %v", inProcess.Round(10*time.Microsecond))
+	t.Logf("p95 vedei-hook via daemon: %v", viaDaemon.Round(10*time.Microsecond))
+	t.Logf("p95 vedei hook in-process: %v", inProcess.Round(10*time.Microsecond))
 
 	if viaDaemon >= inProcess {
 		t.Errorf("the daemon path is not faster: %v via daemon, %v in-process", viaDaemon, inProcess)

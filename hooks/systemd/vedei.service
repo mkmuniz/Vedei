@@ -1,18 +1,18 @@
-# Keeps the nadzor daemon running so each hook call costs a socket round trip
+# Keeps the vedei daemon running so each hook call costs a socket round trip
 # instead of compiling 417 rules. Copy to ~/.config/systemd/user/ and fix the
-# path to your binary (`which nadzor`).
+# path to your binary (`which vedei`).
 #
-#   systemctl --user enable --now nadzor
+#   systemctl --user enable --now vedei
 #
 # A user unit, not a system one: the socket is per-user by design, and the
 # daemon should have exactly the reach of the person whose agent it serves.
 
 [Unit]
-Description=nadzor redaction daemon
-Documentation=https://github.com/mkmuniz/nadzor
+Description=vedei redaction daemon
+Documentation=https://github.com/mkmuniz/vedei
 
 [Service]
-ExecStart=%h/go/bin/nadzor daemon
+ExecStart=%h/go/bin/vedei daemon
 Restart=on-failure
 RestartSec=2
 
@@ -21,7 +21,7 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=read-only
-RuntimeDirectory=nadzor
+RuntimeDirectory=vedei
 RuntimeDirectoryMode=0700
 
 [Install]

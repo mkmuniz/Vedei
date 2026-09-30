@@ -7,13 +7,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mkmuniz/nadzor/detect"
-	"github.com/mkmuniz/nadzor/stream"
+	"github.com/mkmuniz/vedei/detect"
+	"github.com/mkmuniz/vedei/stream"
 )
 
 // stripeKey is assembled at run time. Committing a Stripe-shaped key would
 // be blocked by GitHub push protection, which cannot tell a fixture from a
-// live credential — the same limitation nadzor has, and the reason the
+// live credential — the same limitation vedei has, and the reason the
 // fixture on disk carries no secret of its own.
 var stripeKey = "sk" + "_live_" + "4eC39HqLyjWDarjtT1zdp7dc"
 

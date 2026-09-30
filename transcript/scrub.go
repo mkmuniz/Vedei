@@ -13,8 +13,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/mkmuniz/nadzor/detect"
-	"github.com/mkmuniz/nadzor/stream"
+	"github.com/mkmuniz/vedei/detect"
+	"github.com/mkmuniz/vedei/stream"
 )
 
 // maxScrubDepth bounds the recursion that rewrites a record. A transcript is
@@ -56,7 +56,7 @@ type ScrubResult struct {
 
 // Scrub rewrites a transcript with every detected value masked.
 //
-// This is the only command in nadzor that modifies a file the user did not hand
+// This is the only command in vedei that modifies a file the user did not hand
 // it, and the only one where a bug destroys something irreplaceable. The order
 // below is the safety argument, and each step exists because skipping it is how
 // this goes wrong:
@@ -114,7 +114,7 @@ func (s *Scanner) Scrub(ctx context.Context, agent Agent, path string, opts Scru
 		res.Backup = backup
 	}
 
-	tmp, err := os.CreateTemp(filepath.Dir(path), ".nadzor-scrub-*")
+	tmp, err := os.CreateTemp(filepath.Dir(path), ".vedei-scrub-*")
 	if err != nil {
 		return res, fmt.Errorf("creating a temporary file beside %s: %w", path, err)
 	}
@@ -298,7 +298,7 @@ func scrubRecord(line []byte, redact redactor) ([]byte, []detect.Finding, error)
 	if err != nil {
 		// json.Valid said yes, so this is the depth bound, not a parse error.
 		// Leaving the record untouched is right: it is better to carry a value
-		// nadzor could not reach than to write a record it could not rebuild.
+		// vedei could not reach than to write a record it could not rebuild.
 		return line, nil, fmt.Errorf("rewriting a record: %w", err)
 	}
 	return out.Bytes(), found, nil
@@ -427,7 +427,7 @@ func writeJSONString(out *bytes.Buffer, s string) error {
 // By hash and not by length: a truncated copy of the right size is exactly the
 // failure a backup is supposed to rule out.
 func backupFile(path string, mode os.FileMode) (string, error) {
-	name := fmt.Sprintf("%s.nadzor-backup-%s", path, time.Now().UTC().Format("20060102T150405Z"))
+	name := fmt.Sprintf("%s.vedei-backup-%s", path, time.Now().UTC().Format("20060102T150405Z"))
 
 	src, err := os.Open(path) //#nosec G304 -- read-only, the file about to be rewritten; Scrub has already refused anything but a regular file
 	if err != nil {

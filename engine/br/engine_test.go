@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mkmuniz/nadzor/detect"
+	"github.com/mkmuniz/vedei/detect"
 )
 
 func scan(t *testing.T, text string) []detect.Finding {

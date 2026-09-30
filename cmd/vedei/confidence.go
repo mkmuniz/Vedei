@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/mkmuniz/nadzor/detect"
+	"github.com/mkmuniz/vedei/detect"
 )
 
 // confidenceRank orders confidence so a threshold can be compared.

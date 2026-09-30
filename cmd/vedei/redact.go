@@ -6,10 +6,10 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/mkmuniz/nadzor/daemon"
-	"github.com/mkmuniz/nadzor/detect"
-	"github.com/mkmuniz/nadzor/engine"
-	"github.com/mkmuniz/nadzor/stream"
+	"github.com/mkmuniz/vedei/daemon"
+	"github.com/mkmuniz/vedei/detect"
+	"github.com/mkmuniz/vedei/engine"
+	"github.com/mkmuniz/vedei/stream"
 )
 
 // redactOpts are the flags every redaction command shares.

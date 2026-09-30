@@ -6,9 +6,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/mkmuniz/nadzor/daemon"
-	"github.com/mkmuniz/nadzor/engine"
-	"github.com/mkmuniz/nadzor/stream"
+	"github.com/mkmuniz/vedei/daemon"
+	"github.com/mkmuniz/vedei/engine"
+	"github.com/mkmuniz/vedei/stream"
 )
 
 func newDaemonCmd() *cobra.Command {
@@ -28,7 +28,7 @@ requests on a Unix socket.
 
 It exists because of a measurement: a process that starts per tool call spends
 about 12 ms on spawn and 14 ms compiling the secret rules to do 0.3 ms of
-detection. The daemon pays that once, and "nadzor hook" then costs a round
+detection. The daemon pays that once, and "vedei hook" then costs a round
 trip.
 
 The socket is created mode 0600 inside a 0700 directory, and carries text that
@@ -61,7 +61,7 @@ it is not there.`,
 				return err
 			}
 			if !quiet {
-				_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "nadzor daemon: listening on %s\n", srv.Addr())
+				_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "vedei daemon: listening on %s\n", srv.Addr())
 			}
 			return srv.Serve(cmd.Context())
 		},

@@ -37,7 +37,7 @@ func TestExtract_FindsValidCPF(t *testing.T) {
 }
 
 // A CPF that fails its check digit must never surface. This is the promise
-// that separates nadzor from a grep.
+// that separates vedei from a grep.
 func TestExtract_RejectsInvalidCheckDigit(t *testing.T) {
 	for _, text := range []string{
 		"cpf 529.982.247-26",
@@ -226,7 +226,7 @@ func BenchmarkExtract(b *testing.B) {
 	}
 }
 
-// Throughput is a security property here, not a nicety: nadzor scans content
+// Throughput is a security property here, not a nicety: vedei scans content
 // it does not control, so a pattern that collapses on adversarial input is a
 // denial-of-service opening. ExtractPixKeys once ran 46x slower than the
 // document patterns because its alternation regex had no gate.
@@ -382,7 +382,7 @@ func TestExtractPixKeys_BareUUIDIsNotAPixKey(t *testing.T) {
 // passes on a random digit run about one time in ten, and YYYYMMDDHHMMSS is
 // everywhere: Go pseudo-versions, log lines, filenames, migration names.
 //
-// Every one of these passes Luhn. Scanning nadzor's own repository is where the
+// Every one of these passes Luhn. Scanning vedei's own repository is where the
 // first two came from — go.mod, reported at high confidence.
 func TestExtract_TimestampIsNotACardPAN(t *testing.T) {
 	for _, text := range []string{

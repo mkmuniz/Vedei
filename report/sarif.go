@@ -7,13 +7,13 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/mkmuniz/nadzor/detect"
+	"github.com/mkmuniz/vedei/detect"
 )
 
 // SARIF is emitted by hand rather than through a library, and deliberately.
 //
 // It is the format GitHub Code Scanning consumes, and betterleaks is removing
-// it in v2 — which is exactly why nadzor should own it rather than inherit it.
+// it in v2 — which is exactly why vedei should own it rather than inherit it.
 // The schema below is SARIF 2.1.0, restricted to the properties GitHub reads.
 const (
 	sarifVersion = "2.1.0"
@@ -116,7 +116,7 @@ type sarifNotif struct {
 // is uploaded to GitHub and rendered in a web UI, which makes it exactly the
 // kind of destination ADR-003 is about.
 //
-// partialFingerprints carries nadzor's own fingerprint, which is derived from
+// partialFingerprints carries vedei's own fingerprint, which is derived from
 // the type and the normalized value and never from the location. That is what
 // lets GitHub track a finding as the same alert after the file moves or lines
 // are inserted above it.
@@ -144,7 +144,7 @@ func WriteSARIF(w io.Writer, run Run) error {
 			Tool: sarifTool{Driver: sarifDriver{
 				Name:           run.Tool,
 				Version:        run.Version,
-				InformationURI: "https://github.com/mkmuniz/nadzor",
+				InformationURI: "https://github.com/mkmuniz/vedei",
 				Rules:          rules,
 			}},
 			Results:     results,
@@ -207,7 +207,7 @@ func sarifResultOf(f detect.Finding, ruleIndex int) sarifResult {
 		// rendered in a web UI.
 		Message: sarifText{Text: fmt.Sprintf("%s found: %s", describeType(f.Type), f.Redacted)},
 		PartialFingerps: map[string]string{
-			"nadzorFingerprint/v1": f.Fingerprint,
+			"vedeiFingerprint/v1": f.Fingerprint,
 		},
 		Properties: map[string]string{
 			"engine":     f.Engine,
@@ -317,6 +317,6 @@ func helpFor(f detect.Finding) string {
 	}
 	return "This value's check digit is valid, so it is a well-formed document " +
 		"number, not a random string. If it belongs in the repository, record " +
-		"its fingerprint in .nadzorignore with a reason. If it does not, remove " +
+		"its fingerprint in .vedeiignore with a reason. If it does not, remove " +
 		"it and treat it as a personal-data incident under the LGPD."
 }

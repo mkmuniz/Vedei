@@ -8,7 +8,7 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/mkmuniz/nadzor/detect"
+	"github.com/mkmuniz/vedei/detect"
 )
 
 // maxValueWidth keeps a long redacted value from stretching the table past a
@@ -74,7 +74,7 @@ func writeTable(w io.Writer, run Run) error {
 // omission.
 func writeTableFooter(w io.Writer, run Run) error {
 	if run.Ignored > 0 {
-		if _, err := fmt.Fprintf(w, "%d finding(s) silenced by .nadzorignore\n", run.Ignored); err != nil {
+		if _, err := fmt.Fprintf(w, "%d finding(s) silenced by .vedeiignore\n", run.Ignored); err != nil {
 			return fmt.Errorf("report: writing table: %w", err)
 		}
 	}

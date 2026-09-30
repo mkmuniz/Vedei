@@ -43,7 +43,7 @@ entries in `corpus/` covering both a true positive and a false positive
 
 Don't. Secret rules belong upstream in
 [betterleaks](https://github.com/betterleaks/betterleaks) — open the PR there
-and nadzor inherits it. This keeps one corpus instead of two diverging ones.
+and vedei inherits it. This keeps one corpus instead of two diverging ones.
 
 ## Pull requests
 

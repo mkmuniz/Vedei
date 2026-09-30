@@ -1,6 +1,6 @@
 // Package hookevent parses and rewrites a coding agent's hook event.
 //
-// It is shared by the full nadzor binary and by the thin hook client, which
+// It is shared by the full vedei binary and by the thin hook client, which
 // exists so the hook does not pay for loading a 26 MB binary; keeping the
 // event handling here is what lets the client stay small.
 package hookevent

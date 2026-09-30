@@ -7,7 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/mkmuniz/nadzor/detect"
+	"github.com/mkmuniz/vedei/detect"
 )
 
 func newStreamCmd() *cobra.Command {
@@ -41,14 +41,14 @@ rule set; without one the work happens in-process.`,
 			}
 
 			if res.Degraded && !quiet {
-				fmt.Fprintf(os.Stderr, "nadzor: passed through unredacted: %v\n", res.Err)
+				fmt.Fprintf(os.Stderr, "vedei: passed through unredacted: %v\n", res.Err)
 			}
 			if len(res.Findings) == 0 {
 				return nil
 			}
 			if !quiet {
 				for _, f := range res.Findings {
-					fmt.Fprintf(os.Stderr, "nadzor: redacted %s (%s)\n", f.Type, f.Confidence)
+					fmt.Fprintf(os.Stderr, "vedei: redacted %s (%s)\n", f.Type, f.Confidence)
 				}
 			}
 			return findingsError{n: len(res.Findings)}

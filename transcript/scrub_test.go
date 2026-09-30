@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mkmuniz/nadzor/engine"
-	"github.com/mkmuniz/nadzor/transcript"
+	"github.com/mkmuniz/vedei/engine"
+	"github.com/mkmuniz/vedei/transcript"
 )
 
 const scrubCPF = "529.982.247-25"
@@ -55,7 +55,7 @@ func TestScrub_RemovesTheValueAndKeepsValidJSON(t *testing.T) {
 	if strings.Contains(out, scrubCPF) {
 		t.Fatalf("the value survived:\n%s", out)
 	}
-	if !strings.Contains(out, "nadzor: cpf redacted") {
+	if !strings.Contains(out, "vedei: cpf redacted") {
 		t.Errorf("no annotation:\n%s", out)
 	}
 

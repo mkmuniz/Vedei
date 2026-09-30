@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/mkmuniz/nadzor/detect"
+	"github.com/mkmuniz/vedei/detect"
 )
 
 // GitRef names a blob inside a repository, for a report a person can act on:
@@ -58,7 +58,7 @@ var ErrRevisionLooksLikeAFlag = errors.New("scan: a revision may not start with 
 // git parses a leading "-" as a flag wherever a revision is expected. gosec
 // flagged the exec call and the concern turned out to be real:
 //
-//	nadzor diff --base "--output=/tmp/pwned"
+//	vedei diff --base "--output=/tmp/pwned"
 //
 // became "git diff --name-only -z --output=/tmp/pwned HEAD", and git wrote the
 // file. A revision is never spelled with a leading dash, so refusing one costs
@@ -257,13 +257,13 @@ func (g *GitScanner) appendFindings(ctx context.Context, res *Result, ref GitRef
 	}
 }
 
-// loadIgnore reads .nadzorignore from the working tree.
+// loadIgnore reads .vedeiignore from the working tree.
 //
 // From the working tree and not from the commit being scanned, deliberately: an
 // ignore entry is a statement about what the maintainers accept today, not about
 // what a commit from two years ago happened to contain.
 func (g *GitScanner) loadIgnore(_ context.Context) (Stack, error) {
-	ig, err := LoadIgnore(g.repo+"/.nadzorignore", "")
+	ig, err := LoadIgnore(g.repo+"/.vedeiignore", "")
 	if err != nil {
 		return nil, err
 	}

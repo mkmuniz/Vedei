@@ -9,7 +9,7 @@ import (
 //
 // The distinction between Structural and Live is the heart of the project:
 // personal data can only ever reach Structural, because confirming identity
-// would mean querying an official registry, which nadzor does not do.
+// would mean querying an official registry, which vedei does not do.
 // See docs/adr/002-offline-validation.md.
 type Validity string
 

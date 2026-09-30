@@ -4,7 +4,7 @@
 
 ## Context
 
-nadzor runs on two kinds of path with opposite failure costs.
+vedei runs on two kinds of path with opposite failure costs.
 
 On the redaction path — the agent hook, the logging middleware — it sits
 between a user and their work. On the reporting path — CI, a scan — it answers

@@ -14,7 +14,7 @@ You will get an acknowledgement within 72 hours.
 
 ## Scope
 
-nadzor detects credentials and personal data. Two classes of bug matter most,
+vedei detects credentials and personal data. Two classes of bug matter most,
 and both should be reported privately:
 
 1. **Leaking a detected value.** Any path where a detected secret or personal
@@ -59,7 +59,7 @@ from the secrets engine. M5 measures and corrects this.
 
 **124 transitive dependencies.** Two direct ones, of which betterleaks
 brings the rest, including cloud SDKs it uses for credential validation that
-nadzor does not enable. `govulncheck` runs on every push and weekly, in
+vedei does not enable. `govulncheck` runs on every push and weekly, in
 `.github/workflows/security.yml`, alongside `gosec`, Trivy and the fuzzers.
 
 Weekly matters as much as per-push: a new advisory against a dependency that
@@ -67,7 +67,7 @@ did not change is the case a push-triggered scan never sees.
 
 Run the same checks locally with `make security` and `make fuzz`.
 
-**A structurally valid document may still be fabricated.** nadzor validates
+**A structurally valid document may still be fabricated.** vedei validates
 check digits, never identity, and never will (ADR-002). A generated CPF in a
 test fixture is indistinguishable from a real one by arithmetic alone.
 
@@ -78,16 +78,16 @@ key is the credential. For keeping data out of an agent's context it is still a
 gap, and a real one. Stripe, GitHub PAT and Slack tokens are detected. M5.
 
 **The daemon is a long-lived process holding a Unix socket.** If you run
-`nadzor daemon`, note what it is and is not:
+`vedei daemon`, note what it is and is not:
 
-- The socket is created mode `0600`. Where nadzor creates its directory, that
-  directory is `0700`; where the directory already existed, nadzor refuses to
+- The socket is created mode `0600`. Where vedei creates its directory, that
+  directory is `0700`; where the directory already existed, vedei refuses to
   bind if it is world-writable without the sticky bit, and otherwise leaves the
   mode alone — restricting a shared directory is not its call.
 - **Unix-domain only.** There is no TCP mode and there should not be one:
   everything crossing that socket is text that was just judged sensitive.
 - Anyone who can open the socket can send text and read the redacted answer.
-  That is the same reach as running `nadzor` yourself, which is why the mode
+  That is the same reach as running `vedei` yourself, which is why the mode
   and the directory check matter.
 - **Requests are never logged.** Only accept and handler failures are, because
   the text is the sensitive part.

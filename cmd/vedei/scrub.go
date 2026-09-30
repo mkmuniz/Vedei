@@ -10,8 +10,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/mkmuniz/nadzor/engine"
-	"github.com/mkmuniz/nadzor/transcript"
+	"github.com/mkmuniz/vedei/engine"
+	"github.com/mkmuniz/vedei/transcript"
 )
 
 func newTranscriptScrubCmd() *cobra.Command {
@@ -31,16 +31,16 @@ func newTranscriptScrubCmd() *cobra.Command {
 This is the only command that modifies a file you did not hand it, so it is the
 only one that asks first:
 
-  nadzor transcript scrub --dry-run     see exactly what would change
-  nadzor transcript scrub               do it, after confirming
+  vedei transcript scrub --dry-run     see exactly what would change
+  vedei transcript scrub               do it, after confirming
 
-Each file is copied to <name>.nadzor-backup-<timestamp> and the copy is verified
+Each file is copied to <name>.vedei-backup-<timestamp> and the copy is verified
 by hash before anything is written. The rewrite goes to a new file beside the
 original and is renamed over it only after every record is confirmed to still
 parse and the record count is confirmed unchanged — so a failure leaves the
 original exactly as it was.
 
-Close your agent sessions first. nadzor cannot tell whether something is
+Close your agent sessions first. vedei cannot tell whether something is
 appending to a transcript while it is being rewritten, and will not pretend to.`,
 		Args:          cobra.NoArgs,
 		SilenceErrors: true,
@@ -229,12 +229,12 @@ func transcriptFiles(roots map[transcript.Agent]string) ([]transcriptFile, error
 			// would replace the link with a file and leave the value in the
 			// target, while reporting it removed.
 			if d.Type()&os.ModeSymlink != 0 {
-				_, _ = fmt.Fprintf(os.Stderr, "nadzor: skipping %s: it is a symlink\n", p)
+				_, _ = fmt.Fprintf(os.Stderr, "vedei: skipping %s: it is a symlink\n", p)
 				return nil
 			}
 			// A backup still holds the values, so scrubbing one is pointless and
 			// scrubbing it in place would destroy the copy of the original.
-			if strings.Contains(d.Name(), ".nadzor-backup-") {
+			if strings.Contains(d.Name(), ".vedei-backup-") {
 				return nil
 			}
 			out = append(out, transcriptFile{agent: agent, path: p})

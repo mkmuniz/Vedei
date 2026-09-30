@@ -13,10 +13,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mkmuniz/nadzor/detect"
+	"github.com/mkmuniz/vedei/detect"
 )
 
-// Agent names a coding agent whose session logs nadzor knows how to read.
+// Agent names a coding agent whose session logs vedei knows how to read.
 type Agent string
 
 // The agents supported so far.

@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mkmuniz/nadzor/engine"
-	"github.com/mkmuniz/nadzor/scan"
+	"github.com/mkmuniz/vedei/engine"
+	"github.com/mkmuniz/vedei/scan"
 )
 
 // gitRepo creates a repository with a local identity, so these tests never
@@ -23,7 +23,7 @@ func gitRepo(t *testing.T) string {
 	dir := t.TempDir()
 	for _, args := range [][]string{
 		{"init", "-q", "-b", "main"},
-		{"config", "user.name", "nadzor test"},
+		{"config", "user.name", "vedei test"},
 		{"config", "user.email", "test@example.invalid"},
 		{"config", "commit.gpgsign", "false"},
 	} {
@@ -236,7 +236,7 @@ func TestDiff_HandlesADeletedFile(t *testing.T) {
 // An ignore entry is a statement about what the maintainers accept today, not
 // about what a commit from two years ago contained, so it is read from the
 // working tree.
-func TestHistory_NadzorignoreComesFromTheWorkingTree(t *testing.T) {
+func TestHistory_VedeiignoreComesFromTheWorkingTree(t *testing.T) {
 	repo := gitRepo(t)
 	writeFile(t, repo, "a.txt", "cpf "+testCPF)
 	git(t, repo, "add", ".")
@@ -251,7 +251,7 @@ func TestHistory_NadzorignoreComesFromTheWorkingTree(t *testing.T) {
 	}
 
 	// Not committed — only in the working tree.
-	writeFile(t, repo, ".nadzorignore", before.Findings()[0].Fingerprint+"  # test fixture\n")
+	writeFile(t, repo, ".vedeiignore", before.Findings()[0].Fingerprint+"  # test fixture\n")
 
 	after, err := gitScanner(t, repo).History(context.Background())
 	if err != nil {
@@ -296,7 +296,7 @@ func TestGitRef_String(t *testing.T) {
 // inject into, but git reads a leading "-" as a flag wherever a revision is
 // expected:
 //
-//	nadzor diff --base "--output=/tmp/pwned"
+//	vedei diff --base "--output=/tmp/pwned"
 //
 // became "git diff --name-only -z --output=/tmp/pwned HEAD", and git wrote the
 // file. A revision is never spelled with a leading dash, so refusing one closes

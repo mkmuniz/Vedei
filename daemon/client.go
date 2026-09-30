@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mkmuniz/nadzor/detect"
+	"github.com/mkmuniz/vedei/detect"
 )
 
 // DefaultTimeout bounds one request. It is short on purpose: past this point

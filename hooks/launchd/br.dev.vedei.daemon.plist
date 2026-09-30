@@ -1,21 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Keeps the nadzor daemon running so each hook call costs a socket round trip
+  Keeps the vedei daemon running so each hook call costs a socket round trip
   instead of compiling 417 rules. Copy to ~/Library/LaunchAgents/ and fix the
-  path to your binary (`which nadzor`).
+  path to your binary (`which vedei`).
 
   RunAtLoad plus KeepAlive means the socket is there before the first tool call
-  and comes back if the process dies. The daemon is not required: nadzor-hook
+  and comes back if the process dies. The daemon is not required: vedei-hook
   falls back to running the full binary when nothing answers.
 -->
 <plist version="1.0">
 <dict>
   <key>Label</key>
-  <string>br.dev.nadzor.daemon</string>
+  <string>br.dev.vedei.daemon</string>
 
   <key>ProgramArguments</key>
   <array>
-    <string>/opt/homebrew/bin/nadzor</string>
+    <string>/opt/homebrew/bin/vedei</string>
     <string>daemon</string>
   </array>
 
@@ -26,6 +26,6 @@
 
   <!-- Failures only. Requests are never logged: the text is the sensitive part. -->
   <key>StandardErrorPath</key>
-  <string>/tmp/nadzor-daemon.err.log</string>
+  <string>/tmp/vedei-daemon.err.log</string>
 </dict>
 </plist>

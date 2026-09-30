@@ -2,9 +2,9 @@
 package engine
 
 import (
-	"github.com/mkmuniz/nadzor/detect"
-	brengine "github.com/mkmuniz/nadzor/engine/br"
-	"github.com/mkmuniz/nadzor/engine/secrets"
+	"github.com/mkmuniz/vedei/detect"
+	brengine "github.com/mkmuniz/vedei/engine/br"
+	"github.com/mkmuniz/vedei/engine/secrets"
 )
 
 // All returns every engine: Brazilian sensitive data and leaked credentials.

@@ -1,4 +1,4 @@
-# nadzor — Milestones
+# vedei — Milestones
 
 Plano de execução. A arquitetura está em [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
@@ -34,7 +34,7 @@ Premissa de esforço: ~10 h por semana.
 
 ### O que implementar
 
-1. `go.mod` — módulo `github.com/mkmuniz/nadzor`, Go 1.27
+1. `go.mod` — módulo `github.com/mkmuniz/vedei`, Go 1.27
 2. `LICENSE` — MIT
 3. `SECURITY.md` — canal privado de divulgação; obrigatório em ferramenta de segurança
 4. `CONTRIBUTING.md` — como um detector novo é aceito (regex + validador + corpus de teste)
@@ -163,7 +163,7 @@ make bench   # alvo: > 50 MB/s de texto varrido
 - [ ] Zero falso positivo sobre 10.000 valores inválidos gerados, por tipo
 - [ ] Fuzzing roda 5 min sem crash em `extract`
 - [ ] Benchmark publicado no README
-- [ ] `nadzor` como biblioteca: `br.Scan([]byte("cpf 123.456.789-09"))` devolve 1 achado válido
+- [ ] `vedei` como biblioteca: `br.Scan([]byte("cpf 123.456.789-09"))` devolve 1 achado válido
 
 **Risco:** tentar detecção contextual sofisticada agora. Não. Nesta etapa é regex + validador; o validador carrega o peso.
 
@@ -228,10 +228,10 @@ Nenhum provedor faz redação antes do contexto. Os transcripts ficam em `~/.cla
 
 ### O que implementar
 
-**3.1 — `nadzor stream`** (prevenção)
+**3.1 — `vedei stream`** (prevenção)
 
 ```bash
-cat .env | nadzor stream          # stdout tarjado
+cat .env | vedei stream          # stdout tarjado
 echo $?                           # 0 = limpo, 3 = achou, 1 = erro
 ```
 
@@ -241,29 +241,29 @@ echo $?                           # 0 = limpo, 3 = achou, 1 = erro
 
 **3.2 — Hook de agente**
 
-`hooks/claude-code/` e `hooks/codex/`, prontos para copiar. `PostToolUse`: a saída da ferramenta passa pelo nadzor antes de voltar ao modelo.
+`hooks/claude-code/` e `hooks/codex/`, prontos para copiar. `PostToolUse`: a saída da ferramenta passa pelo vedei antes de voltar ao modelo.
 
 **3.3 — Modo daemon** ✅
 
 Socket Unix, config pré-compilada carregada uma vez. É o que viabiliza o orçamento de 10 ms.
 
 ```bash
-nadzor daemon                    # primeiro plano; launchd/systemd em hooks/
-nadzor daemon status             # 0 responde, 1 não responde
-nadzor daemon --idle-timeout 8h  # sai sozinho quando não é usado
+vedei daemon                    # primeiro plano; launchd/systemd em hooks/
+vedei daemon status             # 0 responde, 1 não responde
+vedei daemon --idle-timeout 8h  # sai sozinho quando não é usado
 ```
 
 O daemon sozinho não bastou. Medindo, detecção era 0,26 ms e o resto era setup: ~14 ms compilando as 417 regras e ~7 ms carregando um binário de 26 MB. O daemon tira os 14 ms e deixa 13,3 ms — ainda acima do orçamento, porque o que sobra é o próprio processo nascer.
 
-Daí o segundo binário, **`nadzor-hook`**: 5 MB, não importa o betterleaks, não detecta nada. Só fala com o socket. Com o daemon de pé, **8,4 ms p95**.
+Daí o segundo binário, **`vedei-hook`**: 5 MB, não importa o betterleaks, não detecta nada. Só fala com o socket. Com o daemon de pé, **8,4 ms p95**.
 
-Nada exige o daemon (ADR-005): sem ele, `nadzor-hook` executa o binário completo. Isso custa 36,3 ms — pior que chamar `nadzor hook` direto, porque são dois processos. Quem não vai rodar daemon deve configurar `nadzor hook`, e a doc do hook diz isso primeiro.
+Nada exige o daemon (ADR-005): sem ele, `vedei-hook` executa o binário completo. Isso custa 36,3 ms — pior que chamar `vedei hook` direto, porque são dois processos. Quem não vai rodar daemon deve configurar `vedei hook`, e a doc do hook diz isso primeiro.
 
-**3.4 — `nadzor transcript scan`** (o que já vazou)
+**3.4 — `vedei transcript scan`** (o que já vazou)
 
 ```bash
-nadzor transcript scan                      # detecta ~/.claude, ~/.codex
-nadzor transcript scan --path ~/.claude/projects/
+vedei transcript scan                      # detecta ~/.claude, ~/.codex
+vedei transcript scan --path ~/.claude/projects/
 ```
 
 Relatório: quais transcripts contêm o quê, desde quando, quantas ocorrências. **Somente leitura nesta etapa** — o `scrub`, que reescreve, fica no M4, onde existe backup e dry-run.
@@ -273,12 +273,12 @@ Vale como camada de cibersegurança: quem compromete a máquina, ou rouba o note
 ### Passo a passo
 
 1. `redact/` — tarja preservando formato
-2. `nadzor stream` sobre os dois motores
+2. `vedei stream` sobre os dois motores
 3. Medir latência. Se passar de 10 ms, implementar o daemon antes de seguir.
 4. Hook do Claude Code + instalador
 5. Hook do Codex
 6. `transcript/` — parser de JSONL dos dois formatos
-7. `nadzor transcript scan` + relatório
+7. `vedei transcript scan` + relatório
 8. Gravar os dois GIFs
 
 ### Como testar
@@ -303,7 +303,7 @@ func TestStream_FailOpen(t *testing.T) {
 
 ### Critério de saída
 
-- [x] p95 do hook medido e documentado — **8,4 ms** com `nadzor-hook` + daemon,
+- [x] p95 do hook medido e documentado — **8,4 ms** com `vedei-hook` + daemon,
       dentro do orçamento de 10 ms. A primeira medição, com um processo por
       chamada, deu 28,9 ms; o orçamento era um chute feito antes de existir o
       que medir e acabou alcançável, mas só depois de atacar setup em vez de
@@ -315,7 +315,7 @@ func TestStream_FailOpen(t *testing.T) {
       tarjada no stderr e entregue ao modelo intacta. Coberto agora em três
       camadas: `engine/secrets` (offsets existem e apontam para o valor),
       `engine` (o texto que sai do processor não contém o segredo) e
-      `cmd/nadzor-hook` (o evento que volta ao agente não contém o segredo).
+      `cmd/vedei-hook` (o evento que volta ao agente não contém o segredo).
 - [x] Motor em pânico deixa o texto passar intacto — `TestProcess_FailsOpenOnPanic`
 - [x] `transcript scan` acha segredo conhecido e não vaza o valor no relatório
 - [ ] Dois GIFs no README — pendente, precisa de gravação de tela
@@ -328,7 +328,7 @@ func TestStream_FailOpen(t *testing.T) {
 
 1. **Segredo detectado e não tarjado** (acima). O stderr dizia `redacted`, o texto saía com a chave. Um ano de testes de unidade em `engine/secrets` não pegaria: cada peça estava certa, o contrato entre elas não.
 2. **`card-pan` dentro de um UUID.** `11111111-2222-3333-4444-555555555555` virava cartão `4444-555555555555`, confiança alta — 16 dígitos que passam Luhn por coincidência. O padrão aceitava cada separador de forma independente. Agora exige agrupamento consistente: sem separador, ou grupos de 4 com o mesmo separador.
-3. **`chmod` no diretório pai do socket** falhava em `/tmp` (`operation not permitted`). Restringir o diretório só é nadzor quando nadzor o criou.
+3. **`chmod` no diretório pai do socket** falhava em `/tmp` (`operation not permitted`). Restringir o diretório só é vedei quando vedei o criou.
 4. **O daemon não desligava** com um cliente conectado e ocioso: fechar o listener não fecha conexões aceitas, então `SIGTERM` esperava para sempre.
 5. **Caminho de socket > 104 bytes** falha com `EINVAL` puro no macOS, que não diz nada. Agora é checado com a correção na mensagem.
 
@@ -342,21 +342,21 @@ func TestStream_FailOpen(t *testing.T) {
 
 ### O que implementar
 
-1. `nadzor scan <path>`, `nadzor git <repo>`, `nadzor diff`
+1. `vedei scan <path>`, `vedei git <repo>`, `vedei diff`
 2. Relatório **JSON, JSONL e SARIF** — SARIF é estratégico: a v2 do betterleaks vai removê-lo, e é o que o GitHub Code Scanning consome
 3. GitHub Action publicada no Marketplace
 4. Hooks de `pre-commit` e `pre-receive`
 5. Comentário inline em PR
-6. `.nadzorignore` com fingerprint estável
+6. `.vedeiignore` com fingerprint estável
 7. **Códigos de saída distintos**: `0` limpo, `3` achou, `1` erro operacional (é a issue #347 do betterleaks; não repetir)
-8. **`nadzor transcript scrub`** — reescreve o transcript tarjado, com `--dry-run` obrigatório na primeira execução, backup automático e confirmação
+8. **`vedei transcript scrub`** — reescreve o transcript tarjado, com `--dry-run` obrigatório na primeira execução, backup automático e confirmação
 
 ### Passo a passo
 
 1. CLI com cobra; reusar o núcleo, sem lógica nova
 2. Caminhador de diretório com respeito a `.gitignore`
 3. Relatórios, SARIF por último (é o mais chato)
-4. Códigos de saída e `.nadzorignore`
+4. Códigos de saída e `.vedeiignore`
 5. GitHub Action
 6. `transcript scrub` com backup e dry-run
 
@@ -366,9 +366,9 @@ func TestStream_FailOpen(t *testing.T) {
 
 **Código de saída:**
 ```bash
-nadzor scan limpo/;           [ $? -eq 0 ]
-nadzor scan com-segredo/;     [ $? -eq 3 ]
-nadzor scan /sem/permissao/;  [ $? -eq 1 ]
+vedei scan limpo/;           [ $? -eq 0 ]
+vedei scan com-segredo/;     [ $? -eq 3 ]
+vedei scan /sem/permissao/;  [ $? -eq 1 ]
 ```
 
 **Scrub:** copiar um transcript, rodar scrub, verificar que (a) o segredo sumiu, (b) o JSONL continua válido, (c) o backup existe e é idêntico ao original.
@@ -376,7 +376,7 @@ nadzor scan /sem/permissao/;  [ $? -eq 1 ]
 ### Critério de saída
 
 - [x] A Action roda no próprio repositório e publica na aba Security —
-      `.github/workflows/nadzor.yml`, com `mode: diff` em PR e `mode: history`
+      `.github/workflows/vedei.yml`, com `mode: diff` em PR e `mode: history`
       semanal. Ela usa o binário construído do checkout, não o publicado:
       escanear a si mesmo com o release do mês passado prova menos do que parece.
 - [x] Os três códigos de saída conferem, e `1` tem precedência sobre `3` —
@@ -391,7 +391,7 @@ nadzor scan /sem/permissao/;  [ $? -eq 1 ]
       de linha de comando paga sempre: compilar 417 regras e carregar 26 MB de
       binário. Citar só os 218 seria citar o número que ninguém experimenta.
       Benchmark em `scan/bench_test.go`, reportando sem assertar.
-- [x] `.nadzorignore` no próprio repo: 71 achados silenciados, 21 fingerprints,
+- [x] `.vedeiignore` no próprio repo: 71 achados silenciados, 21 fingerprints,
       cada um com o motivo escrito. Nada silenciado por caminho, de propósito.
 
 **Comentário inline em PR** (item 5) **não foi implementado, e não deve ser.**
@@ -412,7 +412,7 @@ pendência.
    precisa começar numa faixa de emissor conhecida; nenhuma bandeira emite número
    começando em 19, 20 ou 21. Quem escreve em grupos de quatro está isento — o
    formato é a evidência, ninguém escreve timestamp como `2024 0915 1554 00`.
-2. **`.nadzorignore` só valia para fingerprint**, não para o caminhamento, então
+2. **`.vedeiignore` só valia para fingerprint**, não para o caminhamento, então
    uma regra de caminho lá não pulava nada.
 3. **Caminhos absolutos no relatório.** O SARIF do GitHub casa o caminho contra a
    árvore do repositório, então um caminho absoluto põe o alerta em arquivo
@@ -592,8 +592,8 @@ func TestAllowHosts_RecusaDNSRebinding(t *testing.T)  // DNS resolve para 127.0.
 1. Documentação completa, pt-BR e inglês
 2. Garantia de estabilidade de API e política de versionamento
 3. Governança: como um detector novo é aceito, quem revisa
-4. Comparação honesta: quando usar nadzor, quando usar betterleaks, quando usar os dois
-5. Auditoria do próprio projeto (rodar nadzor e betterleaks em si mesmo)
+4. Comparação honesta: quando usar vedei, quando usar betterleaks, quando usar os dois
+5. Auditoria do próprio projeto (rodar vedei e betterleaks em si mesmo)
 
 ### Critério de saída
 

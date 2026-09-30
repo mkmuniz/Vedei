@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mkmuniz/nadzor/engine"
+	"github.com/mkmuniz/vedei/engine"
 )
 
 const cpf = "529.982.247-25"

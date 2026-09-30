@@ -252,7 +252,7 @@ func overlaps(taken []bool, start, end int) bool {
 // one and is not: a timestamp.
 //
 // Luhn passes on a random digit run roughly one time in ten, and unbroken runs
-// of 13 to 19 digits are everywhere. Scanning nadzor's own repository found
+// of 13 to 19 digits are everywhere. Scanning vedei's own repository found
 // "20240915155400" in go.mod — the timestamp inside a Go pseudo-version —
 // reported as a card at high confidence. YYYYMMDDHHMMSS appears in module
 // versions, log lines, filenames and migration names, so this is a whole class

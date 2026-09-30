@@ -1,13 +1,13 @@
-// Command nadzor-hook is the agent hook, kept small on purpose.
+// Command vedei-hook is the agent hook, kept small on purpose.
 //
-// The full nadzor binary carries several hundred compiled secret rules and the
+// The full vedei binary carries several hundred compiled secret rules and the
 // dependency tree behind them, which is 26 MB to load before any work starts —
 // about 7 ms of the 13 ms a hook call costs even when a daemon does the
 // detection. This binary imports only the socket client, so it loads in ~1 ms,
 // and the whole call lands near 6 ms.
 //
 // It never detects anything itself. With a daemon listening it forwards the
-// text; without one it hands the event to "nadzor hook", paying the full cost
+// text; without one it hands the event to "vedei hook", paying the full cost
 // rather than silently skipping the redaction. Both paths are fail-open: on
 // any failure the event is written back byte for byte.
 package main
@@ -23,9 +23,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/mkmuniz/nadzor/daemon"
-	"github.com/mkmuniz/nadzor/detect"
-	"github.com/mkmuniz/nadzor/internal/hookevent"
+	"github.com/mkmuniz/vedei/daemon"
+	"github.com/mkmuniz/vedei/detect"
+	"github.com/mkmuniz/vedei/internal/hookevent"
 )
 
 var version = "dev"
@@ -38,12 +38,12 @@ func main() {
 	// for as long as it lived.
 	fallbackTimeout := flag.Duration("fallback-timeout", 30*time.Second,
 		"give up on the fallback command after this long")
-	fallback := flag.String("fallback", "", `command to fall back to, or "" to look for nadzor beside this binary; "-" to disable`)
+	fallback := flag.String("fallback", "", `command to fall back to, or "" to look for vedei beside this binary; "-" to disable`)
 	showVersion := flag.Bool("version", false, "print the version and exit")
 	flag.Parse()
 
 	if *showVersion {
-		fmt.Println("nadzor-hook", version)
+		fmt.Println("vedei-hook", version)
 		return
 	}
 
@@ -86,7 +86,7 @@ func viaDaemon(ctx context.Context, input []byte, socket string, timeout time.Du
 			return "", false
 		}
 		for _, f := range resp.Findings {
-			fmt.Fprintf(os.Stderr, "nadzor: redacted %s\n", f.Type)
+			fmt.Fprintf(os.Stderr, "vedei: redacted %s\n", f.Type)
 		}
 		return resp.Text, true
 	})
@@ -98,14 +98,14 @@ func viaDaemon(ctx context.Context, input []byte, socket string, timeout time.Du
 func viaFallback(input []byte, override string, timeout time.Duration) []byte {
 	bin, args := resolveFallback(override)
 	if bin == "" {
-		fmt.Fprintln(os.Stderr, "nadzor: no daemon and no nadzor binary found; event passed through unredacted")
+		fmt.Fprintln(os.Stderr, "vedei: no daemon and no vedei binary found; event passed through unredacted")
 		return input
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, bin, args...) //#nosec G204 -- resolved from --fallback, NADZOR_BIN, or a nadzor beside this binary; anyone who can set those can already run anything as this user
+	cmd := exec.CommandContext(ctx, bin, args...) //#nosec G204 -- resolved from --fallback, VEDEI_BIN, or a vedei beside this binary; anyone who can set those can already run anything as this user
 	cmd.Stdin = bytes.NewReader(input)
 	cmd.Stderr = os.Stderr
 	out, err := cmd.Output()
@@ -116,10 +116,10 @@ func viaFallback(input []byte, override string, timeout time.Duration) []byte {
 }
 
 // resolveFallback picks the command to fall back to: the --fallback flag, then
-// NADZOR_BIN, then a nadzor sitting beside this binary, then one on PATH.
+// VEDEI_BIN, then a vedei sitting beside this binary, then one on PATH.
 //
 // The sibling is tried before PATH so an installation is self-contained: the
-// pair is built and shipped together, and a different nadzor earlier on PATH
+// pair is built and shipped together, and a different vedei earlier on PATH
 // should not quietly take over.
 func resolveFallback(override string) (bin string, args []string) {
 	switch override {
@@ -130,16 +130,16 @@ func resolveFallback(override string) (bin string, args []string) {
 		return override, nil
 	}
 
-	if env := os.Getenv("NADZOR_BIN"); env != "" {
+	if env := os.Getenv("VEDEI_BIN"); env != "" {
 		return env, []string{"hook", "--no-daemon"}
 	}
 	if self, err := os.Executable(); err == nil {
-		sibling := filepath.Join(filepath.Dir(self), "nadzor")
+		sibling := filepath.Join(filepath.Dir(self), "vedei")
 		if st, err := os.Stat(sibling); err == nil && !st.IsDir() {
 			return sibling, []string{"hook", "--no-daemon"}
 		}
 	}
-	if found, err := exec.LookPath("nadzor"); err == nil {
+	if found, err := exec.LookPath("vedei"); err == nil {
 		return found, []string{"hook", "--no-daemon"}
 	}
 	return "", nil

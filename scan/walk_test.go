@@ -8,10 +8,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mkmuniz/nadzor/detect"
-	"github.com/mkmuniz/nadzor/engine"
-	"github.com/mkmuniz/nadzor/fingerprint"
-	"github.com/mkmuniz/nadzor/scan"
+	"github.com/mkmuniz/vedei/detect"
+	"github.com/mkmuniz/vedei/engine"
+	"github.com/mkmuniz/vedei/fingerprint"
+	"github.com/mkmuniz/vedei/scan"
 )
 
 const testCPF = "529.982.247-25"
@@ -222,14 +222,14 @@ func TestScan_SkipsSymlinksByDefault(t *testing.T) {
 	}
 }
 
-// A .nadzorignore fingerprint silences a value wherever it appears, which is
+// A .vedeiignore fingerprint silences a value wherever it appears, which is
 // the point: it has to survive the file being moved or renamed.
-func TestScan_NadzorignoreSilencesByFingerprint(t *testing.T) {
+func TestScan_VedeiignoreSilencesByFingerprint(t *testing.T) {
 	fp := fingerprint.Of("cpf", testCPF)
 	root := tree(t, map[string]string{
-		".nadzorignore": fp + "  # the CPF in our fixtures\n",
-		"a.txt":         "cpf " + testCPF,
-		"moved/b.txt":   "cpf " + testCPF,
+		".vedeiignore": fp + "  # the CPF in our fixtures\n",
+		"a.txt":        "cpf " + testCPF,
+		"moved/b.txt":  "cpf " + testCPF,
 	})
 
 	res := run(t, root)
@@ -241,9 +241,9 @@ func TestScan_NadzorignoreSilencesByFingerprint(t *testing.T) {
 	}
 }
 
-func TestScan_NadzorignorePathRules(t *testing.T) {
+func TestScan_VedeiignorePathRules(t *testing.T) {
 	root := tree(t, map[string]string{
-		".nadzorignore":  "testdata/\n",
+		".vedeiignore":   "testdata/\n",
 		"testdata/a.txt": "cpf " + testCPF,
 		"b.txt":          "cpf " + testCPF,
 	})

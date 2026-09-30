@@ -15,7 +15,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/mkmuniz/nadzor/stream"
+	"github.com/mkmuniz/vedei/stream"
 )
 
 // maxSocketPath is the kernel's limit on a Unix socket path: sun_path is a
@@ -32,7 +32,7 @@ func maxSocketPath() int {
 // ErrAlreadyRunning means another daemon answers on that socket. It is
 // distinguished from a stale socket file, which is removed and rebound,
 // because removing a live daemon's socket would silently orphan it.
-var ErrAlreadyRunning = errors.New("daemon: another nadzor daemon is listening on this socket")
+var ErrAlreadyRunning = errors.New("daemon: another vedei daemon is listening on this socket")
 
 // Server answers redaction requests over a Unix socket.
 //
@@ -95,7 +95,7 @@ func NewServer(proc *stream.Processor, path string, opts ...ServerOption) *Serve
 func (s *Server) Listen(ctx context.Context) error {
 	if n := len(s.path); n >= maxSocketPath() {
 		return fmt.Errorf("daemon: socket path is %d bytes and the kernel allows %d; "+
-			"set NADZOR_SOCKET or --socket to something shorter", n, maxSocketPath()-1)
+			"set VEDEI_SOCKET or --socket to something shorter", n, maxSocketPath()-1)
 	}
 
 	if err := prepareDir(filepath.Dir(s.path)); err != nil {
@@ -347,5 +347,5 @@ func (s *Server) reply(enc *json.Encoder, resp Response) {
 }
 
 func (s *Server) logf(format string, args ...any) {
-	_, _ = fmt.Fprintf(s.logw, "nadzor daemon: "+format+"\n", args...)
+	_, _ = fmt.Fprintf(s.logw, "vedei daemon: "+format+"\n", args...)
 }

@@ -1,8 +1,8 @@
-BINARY  := nadzor
+BINARY  := vedei
 # The hook client is a separate binary because its size is its whole point:
 # it skips the rule set and the dependency tree behind it, so it loads in ~1 ms
 # instead of ~7 ms. Measured: 8.7 ms per hook call against 29 ms.
-HOOKBIN := nadzor-hook
+HOOKBIN := vedei-hook
 VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 LDFLAGS := -s -w -X main.version=$(VERSION)
 
@@ -11,13 +11,13 @@ LDFLAGS := -s -w -X main.version=$(VERSION)
 all: lint test build
 
 build:
-	go build -trimpath -ldflags "$(LDFLAGS)" -o bin/$(BINARY) ./cmd/nadzor
-	go build -trimpath -ldflags "$(LDFLAGS)" -o bin/$(HOOKBIN) ./cmd/nadzor-hook
+	go build -trimpath -ldflags "$(LDFLAGS)" -o bin/$(BINARY) ./cmd/vedei
+	go build -trimpath -ldflags "$(LDFLAGS)" -o bin/$(HOOKBIN) ./cmd/vedei-hook
 
 # Prints the hook latency on both paths, with and without a daemon. This is the
 # number the M3 exit criterion is about, so it is a target rather than a note.
 latency: build
-	go test -race=false -run TestHookLatency -v -count=1 ./cmd/nadzor-hook/
+	go test -race=false -run TestHookLatency -v -count=1 ./cmd/vedei-hook/
 
 test:
 	go test -race ./...
@@ -36,7 +36,7 @@ bench:
 lint:
 	golangci-lint run
 
-# nadzor is a security tool: it must pass its own class of scanner.
+# vedei is a security tool: it must pass its own class of scanner.
 #
 # go test -fuzz takes exactly one target, so each is named. Check-digit
 # arithmetic, the record rewriter and the ignore matcher are the three places

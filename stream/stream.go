@@ -6,7 +6,7 @@ import (
 	"io"
 	"sort"
 
-	"github.com/mkmuniz/nadzor/detect"
+	"github.com/mkmuniz/vedei/detect"
 )
 
 // Result reports what a Process call did.
@@ -31,7 +31,7 @@ type Annotator func(detect.Finding) string
 // a reader — or a model — can tell something was removed rather than
 // silently reading altered text.
 func DefaultAnnotator(f detect.Finding) string {
-	return fmt.Sprintf("%s [nadzor: %s redacted]", f.Redacted, f.Type)
+	return fmt.Sprintf("%s [vedei: %s redacted]", f.Redacted, f.Type)
 }
 
 // Processor redacts sensitive data out of text as it passes through.

@@ -28,7 +28,7 @@ func ValidateLuhn(s string) bool {
 // CardBrand names the network a PAN belongs to, inferred from its BIN range.
 type CardBrand string
 
-// The card networks nadzor recognizes by BIN range.
+// The card networks vedei recognizes by BIN range.
 const (
 	BrandUnknown    CardBrand = "unknown"
 	BrandVisa       CardBrand = "visa"
