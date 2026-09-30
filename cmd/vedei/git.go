@@ -7,9 +7,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/mkmuniz/nadzor/engine"
-	"github.com/mkmuniz/nadzor/report"
-	"github.com/mkmuniz/nadzor/scan"
+	"github.com/mkmuniz/vedei/engine"
+	"github.com/mkmuniz/vedei/report"
+	"github.com/mkmuniz/vedei/scan"
 )
 
 // gitOpts are the flags the git-backed commands share with scan.
@@ -55,17 +55,17 @@ func newGitCmd() *cobra.Command {
 
 This is the command that finds the common case: a credential that was committed
 and then deleted. Removing it from the working tree is what people do instead of
-rotating it, and the blob is still there — "nadzor scan" will not see it, and
+rotating it, and the blob is still there — "vedei scan" will not see it, and
 neither will a reviewer.
 
 A blob reachable from several commits is scanned once, which on a real
 repository is the difference between minutes and hours.
 
-.nadzorignore is read from the working tree, not from the commit being scanned:
+.vedeiignore is read from the working tree, not from the commit being scanned:
 an ignore entry states what the maintainers accept today, not what a commit from
 two years ago happened to contain.
 
-Needs git on PATH. nadzor drives the git binary rather than reimplementing it,
+Needs git on PATH. vedei drives the git binary rather than reimplementing it,
 so partial clones, worktrees, LFS and submodules behave exactly as your own git
 does.`,
 		Args:          cobra.MaximumNArgs(1),
@@ -101,8 +101,8 @@ func newDiffCmd() *cobra.Command {
 		Short: "Scan staged changes, or the files that changed between two revisions",
 		Long: `Two modes, for the two places this belongs.
 
-  nadzor diff --staged           what is about to be committed
-  nadzor diff --base X --head Y  what changed between two revisions
+  vedei diff --staged           what is about to be committed
+  vedei diff --base X --head Y  what changed between two revisions
 
 --staged reads the index rather than the working tree, which is what a
 pre-commit hook needs: a secret you edited but did not stage is not part of this
@@ -111,7 +111,7 @@ what gets scanned even after you clean up the file.
 
 --base/--head is what CI wants. Re-scanning the whole history on every push is
 how a secret scanner becomes the slowest step in the pipeline, and everything
-before the base was already scanned once. Use "nadzor git" for the full history,
+before the base was already scanned once. Use "vedei git" for the full history,
 deliberately, on a schedule.`,
 		Args:          cobra.NoArgs,
 		SilenceErrors: true,
@@ -173,7 +173,7 @@ func runGitScan(cmd *cobra.Command, opts *gitOpts, repo, target string,
 	}
 
 	run := report.Run{
-		Tool:     "nadzor",
+		Tool:     "vedei",
 		Version:  version,
 		Target:   target,
 		Started:  started,

@@ -4,7 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/mkmuniz/nadzor/detect"
+	"github.com/mkmuniz/vedei/detect"
 )
 
 // MaxRequest caps one request. A hook result that exceeds it is the caller's
@@ -41,20 +41,20 @@ func (r Request) Metadata() detect.Metadata {
 }
 
 // DefaultSocket returns the socket path, in order of precedence:
-// NADZOR_SOCKET, then $XDG_RUNTIME_DIR/nadzor/sock, then ~/.nadzor/sock.
+// VEDEI_SOCKET, then $XDG_RUNTIME_DIR/vedei/sock, then ~/.vedei/sock.
 //
 // The runtime directory is preferred where it exists because it is already
 // user-private and cleared on logout. macOS has none, so the home directory
 // is the portable fallback.
 func DefaultSocket() string {
-	if p := os.Getenv("NADZOR_SOCKET"); p != "" {
+	if p := os.Getenv("VEDEI_SOCKET"); p != "" {
 		return p
 	}
 	if dir := os.Getenv("XDG_RUNTIME_DIR"); dir != "" {
-		return filepath.Join(dir, "nadzor", "sock")
+		return filepath.Join(dir, "vedei", "sock")
 	}
 	if home, err := os.UserHomeDir(); err == nil {
-		return filepath.Join(home, ".nadzor", "sock")
+		return filepath.Join(home, ".vedei", "sock")
 	}
-	return filepath.Join(os.TempDir(), "nadzor.sock")
+	return filepath.Join(os.TempDir(), "vedei.sock")
 }

@@ -1,6 +1,6 @@
 // Package scan walks a path and reports what the engines find in it.
 //
-// This is the reporting side of nadzor, so it fails closed (ADR-005): a file
+// This is the reporting side of vedei, so it fails closed (ADR-005): a file
 // that could not be read is an error the caller hears about, because a scan
 // that silently skipped half a tree and reported "clean" is worse than a red
 // build.
@@ -53,7 +53,7 @@ type Ignore struct {
 	Patterns []Pattern
 
 	// Fingerprints are the finding fingerprints this file silences, from a
-	// .nadzorignore. They are matched against detect.Finding.Fingerprint, not
+	// .vedeiignore. They are matched against detect.Finding.Fingerprint, not
 	// against a path, so an entry survives the file being moved or renamed.
 	Fingerprints map[string]string // fingerprint -> the reason on that line
 }
@@ -105,7 +105,7 @@ func ParseIgnore(source, dir string, r io.Reader) (*Ignore, error) {
 // it is an error, because a file that exists and cannot be read may be
 // silencing a finding the caller needs.
 func LoadIgnore(filePath, dir string) (*Ignore, error) {
-	f, err := os.Open(filePath) //#nosec G304 -- .gitignore or .nadzorignore inside the tree the caller asked to scan
+	f, err := os.Open(filePath) //#nosec G304 -- .gitignore or .vedeiignore inside the tree the caller asked to scan
 	if os.IsNotExist(err) {
 		return nil, nil
 	}

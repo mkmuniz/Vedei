@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mkmuniz/nadzor/detect"
-	"github.com/mkmuniz/nadzor/engine"
+	"github.com/mkmuniz/vedei/detect"
+	"github.com/mkmuniz/vedei/engine"
 )
 
 const cpf = "529.982.247-25"
@@ -32,7 +32,7 @@ func TestProcess_RedactsTheValue(t *testing.T) {
 	if !res.Redacted {
 		t.Error("Redacted should be true")
 	}
-	if !strings.Contains(out, "nadzor") {
+	if !strings.Contains(out, "vedei") {
 		t.Errorf("the reader is not told something was removed: %s", out)
 	}
 	// The surrounding text must be intact.

@@ -8,8 +8,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/mkmuniz/nadzor/engine"
-	"github.com/mkmuniz/nadzor/transcript"
+	"github.com/mkmuniz/vedei/engine"
+	"github.com/mkmuniz/vedei/transcript"
 )
 
 func newTranscriptCmd() *cobra.Command {
@@ -47,7 +47,7 @@ This command reports. It does not modify anything.`,
 				roots = transcript.DefaultRoots()
 			}
 			if len(roots) == 0 {
-				fmt.Fprintln(os.Stderr, "nadzor: no agent transcript directory found")
+				fmt.Fprintln(os.Stderr, "vedei: no agent transcript directory found")
 				return nil
 			}
 
@@ -64,7 +64,7 @@ This command reports. It does not modify anything.`,
 				scanned += rep.Scanned
 				failures += len(rep.Errs)
 				for _, e := range rep.Errs {
-					fmt.Fprintf(os.Stderr, "nadzor: %v\n", e)
+					fmt.Fprintf(os.Stderr, "vedei: %v\n", e)
 				}
 			}
 

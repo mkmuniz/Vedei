@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mkmuniz/nadzor/engine"
-	"github.com/mkmuniz/nadzor/scan"
+	"github.com/mkmuniz/vedei/engine"
+	"github.com/mkmuniz/vedei/scan"
 )
 
 // benchWords make the synthetic tree look like source rather than random bytes.

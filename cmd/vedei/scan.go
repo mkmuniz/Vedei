@@ -7,9 +7,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/mkmuniz/nadzor/engine"
-	"github.com/mkmuniz/nadzor/report"
-	"github.com/mkmuniz/nadzor/scan"
+	"github.com/mkmuniz/vedei/engine"
+	"github.com/mkmuniz/vedei/report"
+	"github.com/mkmuniz/vedei/scan"
 )
 
 func newScanCmd() *cobra.Command {
@@ -42,7 +42,7 @@ Ignored by default: .gitignore, plus a list of directories that hold no source
 (.git, node_modules, vendor, target, dist and the like). A credential committed
 into vendor/ is still committed, so --no-default-ignores turns that off.
 
-.nadzorignore silences a finding by fingerprint, which is derived from the type
+.vedeiignore silences a finding by fingerprint, which is derived from the type
 and the value and never from the location — so an entry survives the file being
 moved or renamed. Path patterns work there too, and decide after .gitignore, so
 "!secret.env" forces a scan of something git hides.`,
@@ -78,7 +78,7 @@ moved or renamed. Path patterns work there too, and decide after .gitignore, so
 			}
 
 			run := report.Run{
-				Tool:     "nadzor",
+				Tool:     "vedei",
 				Version:  version,
 				Target:   args[0],
 				Started:  started,

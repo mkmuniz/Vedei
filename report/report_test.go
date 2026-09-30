@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mkmuniz/nadzor/detect"
-	"github.com/mkmuniz/nadzor/report"
+	"github.com/mkmuniz/vedei/detect"
+	"github.com/mkmuniz/vedei/report"
 )
 
 // rawCPF is the value that must never appear in any output. Findings carry it
@@ -18,7 +18,7 @@ const rawCPF = "529.982.247-25"
 
 func sampleRun() report.Run {
 	return report.Run{
-		Tool:     "nadzor",
+		Tool:     "vedei",
 		Version:  "test",
 		Target:   ".",
 		Started:  time.Date(2026, 9, 28, 10, 0, 0, 0, time.UTC),
@@ -107,7 +107,7 @@ func TestWriteJSON_Shape(t *testing.T) {
 // A consumer doing `.findings | length` should not have to special-case a
 // clean run, so the array is empty rather than null.
 func TestWriteJSON_CleanRunHasAnEmptyArray(t *testing.T) {
-	out := write(t, report.FormatJSON, report.Run{Tool: "nadzor"})
+	out := write(t, report.FormatJSON, report.Run{Tool: "vedei"})
 	if !strings.Contains(out, `"findings": []`) {
 		t.Errorf("a clean run emitted:\n%s", out)
 	}
@@ -206,7 +206,7 @@ func TestWriteSARIF_CarriesTheFingerprint(t *testing.T) {
 	}
 
 	for _, res := range log.Runs[0].Results {
-		if res.PartialFingerprints["nadzorFingerprint/v1"] == "" {
+		if res.PartialFingerprints["vedeiFingerprint/v1"] == "" {
 			t.Errorf("%s has no partial fingerprint", res.RuleID)
 		}
 	}
@@ -244,7 +244,7 @@ func TestWriteSARIF_ReportsAFailedInvocation(t *testing.T) {
 	if err := json.Unmarshal([]byte(write(t, report.FormatSARIF, sampleRun())), &withErr); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
-	if err := json.Unmarshal([]byte(write(t, report.FormatSARIF, report.Run{Tool: "nadzor"})), &clean); err != nil {
+	if err := json.Unmarshal([]byte(write(t, report.FormatSARIF, report.Run{Tool: "vedei"})), &clean); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
 
@@ -263,7 +263,7 @@ func TestWriteSARIF_ReportsAFailedInvocation(t *testing.T) {
 // backslash lands the alert on no file at all.
 func TestWriteSARIF_NormalizesPaths(t *testing.T) {
 	run := report.Run{
-		Tool: "nadzor",
+		Tool: "vedei",
 		Findings: []detect.Finding{{
 			Type: "cpf", Engine: "br", Redacted: "***", Confidence: detect.ConfidenceHigh,
 			Fingerprint: "a", Locations: []detect.Location{{Path: `./src\win\a.txt`, Line: 1}},
@@ -282,7 +282,7 @@ func TestWriteSARIF_NormalizesPaths(t *testing.T) {
 // Confidence drives the level, not validity: a structurally valid CPF in a
 // fixture is a true positive that is not a problem.
 func TestWriteSARIF_LevelFollowsConfidence(t *testing.T) {
-	run := report.Run{Tool: "nadzor", Findings: []detect.Finding{
+	run := report.Run{Tool: "vedei", Findings: []detect.Finding{
 		{Type: "high", Confidence: detect.ConfidenceHigh, Fingerprint: "a", Redacted: "*"},
 		{Type: "medium", Confidence: detect.ConfidenceMedium, Fingerprint: "b", Redacted: "*"},
 		{Type: "low", Confidence: detect.ConfidenceLow, Fingerprint: "c", Redacted: "*"},
@@ -302,7 +302,7 @@ func TestWriteSARIF_LevelFollowsConfidence(t *testing.T) {
 }
 
 func TestWriteTable_CleanAndDirty(t *testing.T) {
-	clean := write(t, report.FormatTable, report.Run{Tool: "nadzor", Target: ".", Scanned: 5})
+	clean := write(t, report.FormatTable, report.Run{Tool: "vedei", Target: ".", Scanned: 5})
 	if !strings.Contains(clean, "nothing found in 5 file(s)") {
 		t.Errorf("clean output:\n%s", clean)
 	}
@@ -312,7 +312,7 @@ func TestWriteTable_CleanAndDirty(t *testing.T) {
 		"SEVERITY", "cpf", "***.***.***-25", "src/a.txt:3", "(+1 more)",
 		// The file count is the files that held something, not the files read.
 		"2 finding(s)", "in 3 file(s); 12 scanned",
-		"1 finding(s) silenced by .nadzorignore",
+		"1 finding(s) silenced by .vedeiignore",
 		"3 file(s) skipped", "permission denied",
 	} {
 		if !strings.Contains(dirty, want) {

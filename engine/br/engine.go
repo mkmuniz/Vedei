@@ -5,10 +5,10 @@ import (
 	"sort"
 	"time"
 
-	"github.com/mkmuniz/nadzor/detect"
-	brdetect "github.com/mkmuniz/nadzor/detect/br"
-	"github.com/mkmuniz/nadzor/fingerprint"
-	"github.com/mkmuniz/nadzor/redact"
+	"github.com/mkmuniz/vedei/detect"
+	brdetect "github.com/mkmuniz/vedei/detect/br"
+	"github.com/mkmuniz/vedei/fingerprint"
+	"github.com/mkmuniz/vedei/redact"
 )
 
 // Engine detects Brazilian sensitive data. It makes no network calls, which

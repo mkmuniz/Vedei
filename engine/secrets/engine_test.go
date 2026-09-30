@@ -10,7 +10,7 @@ import (
 	bllogging "github.com/betterleaks/betterleaks/logging"
 	"github.com/rs/zerolog"
 
-	"github.com/mkmuniz/nadzor/detect"
+	"github.com/mkmuniz/vedei/detect"
 )
 
 // stripeKey is assembled at run time rather than written as a literal.

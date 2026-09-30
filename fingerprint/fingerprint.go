@@ -15,7 +15,7 @@ const Length = 32
 // Of returns the fingerprint of a finding, derived from its type and the
 // normalized value — never from its location.
 //
-// That choice is deliberate: an entry in .nadzorignore must survive the file
+// That choice is deliberate: an entry in .vedeiignore must survive the file
 // being moved, renamed, or having lines inserted above it. Fingerprinting the
 // location instead is what makes ignore files rot.
 //

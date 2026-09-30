@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mkmuniz/nadzor/detect"
+	"github.com/mkmuniz/vedei/detect"
 )
 
 // scrubRecord is the highest-blast-radius function in the project: it rewrites

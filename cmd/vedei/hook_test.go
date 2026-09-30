@@ -18,9 +18,9 @@ const testCPF = "529.982.247-25"
 // process, JSON on stdin, JSON on stdout.
 func runHookBinary(t *testing.T, input string, args ...string) string {
 	t.Helper()
-	bin := os.Getenv("NADZOR_BIN")
+	bin := os.Getenv("VEDEI_BIN")
 	if bin == "" {
-		bin = "../../bin/nadzor"
+		bin = "../../bin/vedei"
 	}
 	if _, err := os.Stat(bin); err != nil {
 		t.Skip("binary not built; run make build")

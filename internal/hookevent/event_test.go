@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/mkmuniz/nadzor/internal/hookevent"
+	"github.com/mkmuniz/vedei/internal/hookevent"
 )
 
 func TestFindOutput(t *testing.T) {

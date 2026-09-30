@@ -12,14 +12,14 @@ import (
 	blreport "github.com/betterleaks/betterleaks/report"
 	"github.com/rs/zerolog"
 
-	"github.com/mkmuniz/nadzor/detect"
-	"github.com/mkmuniz/nadzor/fingerprint"
-	"github.com/mkmuniz/nadzor/redact"
+	"github.com/mkmuniz/vedei/detect"
+	"github.com/mkmuniz/vedei/fingerprint"
+	"github.com/mkmuniz/vedei/redact"
 )
 
 // Engine detects leaked credentials by wrapping betterleaks.
 //
-// nadzor writes no secret rules of its own. Maintaining a competing corpus
+// vedei writes no secret rules of its own. Maintaining a competing corpus
 // would take years and still lag; betterleaks is MIT and already carries
 // hundreds of validated rules (ADR-001). This adapter is the only place in
 // the codebase that imports it, so when its v2 API lands — the module path
@@ -75,7 +75,7 @@ func (e *Engine) RuleCount() (int, error) {
 //
 // ADR-003 says a detected value never leaves the process. Relying on someone
 // else's default level is not a way to keep that promise, so the logger is
-// disabled outright. nadzor does not use its output for anything.
+// disabled outright. vedei does not use its output for anything.
 func silenceUpstreamLogger() {
 	bllogging.Logger = zerolog.Nop()
 }
@@ -207,12 +207,12 @@ func locationOf(text string, start, end int, path string) detect.Location {
 	}
 }
 
-// validityOf maps betterleaks' validation status onto nadzor's vocabulary.
+// validityOf maps betterleaks' validation status onto vedei's vocabulary.
 //
 // A secret that was never checked against its provider is Unknown, not
 // Structural: unlike a CPF, there is no arithmetic that proves a credential
 // is well formed. A regex matching is evidence of shape, not of validity,
-// and conflating the two would overstate what nadzor knows.
+// and conflating the two would overstate what vedei knows.
 func validityOf(s blreport.ValidationStatus) detect.Validity {
 	switch strings.ToLower(string(s)) {
 	case "valid":
@@ -247,7 +247,7 @@ func reasonOf(f blreport.Finding) string {
 
 // extraOf carries across the metadata worth keeping, and nothing that could
 // hold the secret. MatchContext and Line are deliberately excluded: both can
-// contain the credential verbatim, and nothing in nadzor may carry it into a
+// contain the credential verbatim, and nothing in vedei may carry it into a
 // report (ADR-003).
 func extraOf(f blreport.Finding) map[string]string {
 	extra := map[string]string{}

@@ -7,7 +7,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/mkmuniz/nadzor/detect"
+	"github.com/mkmuniz/vedei/detect"
 )
 
 // Format is an output format.

@@ -7,7 +7,7 @@ import (
 
 // Fuzzing belongs here more than anywhere else in the project. Check-digit
 // arithmetic is a small amount of code with a large input space, reached by
-// text nadzor does not control, and its failure modes are quiet: a validator
+// text vedei does not control, and its failure modes are quiet: a validator
 // that accepts one wrong value leaks, and one that rejects a right value hides.
 // Examples find neither. The targets below state properties instead.
 

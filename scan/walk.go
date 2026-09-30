@@ -13,7 +13,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/mkmuniz/nadzor/detect"
+	"github.com/mkmuniz/vedei/detect"
 )
 
 // Defaults for a Scanner. They are values rather than hard limits so a caller
@@ -63,7 +63,7 @@ type Result struct {
 	Scanned int
 	Skipped int
 	Bytes   int64
-	Ignored int // findings silenced by a .nadzorignore fingerprint
+	Ignored int // findings silenced by a .vedeiignore fingerprint
 	Errs    []error
 }
 
@@ -144,7 +144,7 @@ func NewScanner(engine detect.Engine, opts ...Option) *Scanner {
 
 // Scan walks root and reports what the engine found.
 //
-// A single file as root is scanned directly, because "nadzor scan file.env" is
+// A single file as root is scanned directly, because "vedei scan file.env" is
 // what a person types first.
 func (s *Scanner) Scan(ctx context.Context, root string) (Result, error) {
 	info, err := os.Stat(root)
@@ -167,7 +167,7 @@ func (s *Scanner) Scan(ctx context.Context, root string) (Result, error) {
 		return res, nil
 	}
 
-	own, err := LoadIgnore(filepath.Join(root, ".nadzorignore"), "")
+	own, err := LoadIgnore(filepath.Join(root, ".vedeiignore"), "")
 	if err != nil {
 		return Result{}, err
 	}
@@ -192,7 +192,7 @@ func (s *Scanner) Scan(ctx context.Context, root string) (Result, error) {
 
 // walk collects the paths to scan, applying ignore rules as it descends so an
 // ignored directory is never entered.
-// own is the .nadzorignore rule set, applied after the gitignore chain so it
+// own is the .vedeiignore rule set, applied after the gitignore chain so it
 // decides last: "!secret.env" there forces a scan of something git hides.
 func (s *Scanner) walk(ctx context.Context, root string, own *Ignore) ([]string, Result, error) {
 	var (

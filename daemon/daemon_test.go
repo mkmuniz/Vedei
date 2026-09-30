@@ -12,10 +12,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mkmuniz/nadzor/daemon"
-	"github.com/mkmuniz/nadzor/detect"
-	"github.com/mkmuniz/nadzor/engine"
-	"github.com/mkmuniz/nadzor/stream"
+	"github.com/mkmuniz/vedei/daemon"
+	"github.com/mkmuniz/vedei/detect"
+	"github.com/mkmuniz/vedei/engine"
+	"github.com/mkmuniz/vedei/stream"
 )
 
 // testCPF is a structurally valid CPF used across the suite.
@@ -437,14 +437,14 @@ func TestClient_RefusesARequestOverTheLimit(t *testing.T) {
 }
 
 func TestDefaultSocket_HonoursTheEnvironment(t *testing.T) {
-	t.Setenv("NADZOR_SOCKET", "/tmp/explicit.sock")
+	t.Setenv("VEDEI_SOCKET", "/tmp/explicit.sock")
 	if got := daemon.DefaultSocket(); got != "/tmp/explicit.sock" {
 		t.Fatalf("DefaultSocket() = %q", got)
 	}
 
-	t.Setenv("NADZOR_SOCKET", "")
+	t.Setenv("VEDEI_SOCKET", "")
 	t.Setenv("XDG_RUNTIME_DIR", "/run/user/1000")
-	if got, want := daemon.DefaultSocket(), "/run/user/1000/nadzor/sock"; got != want {
+	if got, want := daemon.DefaultSocket(), "/run/user/1000/vedei/sock"; got != want {
 		t.Fatalf("DefaultSocket() = %q, want %q", got, want)
 	}
 }

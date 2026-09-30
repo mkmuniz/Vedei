@@ -15,9 +15,9 @@ var version = "dev"
 
 func newRootCmd() *cobra.Command {
 	root := &cobra.Command{
-		Use:   "nadzor",
+		Use:   "vedei",
 		Short: "Find and validate Brazilian sensitive data and leaked secrets",
-		Long: `nadzor finds Brazilian sensitive data and leaked credentials, and
+		Long: `vedei finds Brazilian sensitive data and leaked credentials, and
 validates them offline with check digits before they reach your logs, your
 CI, or your AI agent's context.
 
@@ -44,7 +44,7 @@ func main() {
 		if errors.As(err, &coder) {
 			os.Exit(coder.ExitCode())
 		}
-		fmt.Fprintln(os.Stderr, "nadzor:", err)
+		fmt.Fprintln(os.Stderr, "vedei:", err)
 		os.Exit(exitError)
 	}
 }
