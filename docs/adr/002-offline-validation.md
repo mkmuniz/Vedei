@@ -13,11 +13,11 @@ The second reading is available: CPF lookup services exist.
 
 ## Decision
 
-nadzor validates structure only. It computes check digits, Luhn, ISPB
+vedei validates structure only. It computes check digits, Luhn, ISPB
 membership and format. It never queries an official registry, a bureau or any
 third-party service to confirm that a person or company exists.
 
-nadzor states "this is a structurally valid CPF". It never states whose.
+vedei states "this is a structurally valid CPF". It never states whose.
 
 ## Consequences
 

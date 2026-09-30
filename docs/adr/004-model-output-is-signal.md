@@ -13,7 +13,7 @@ Model classification attaches an attribute to a finding and may reorder a
 triage queue. It may never discard a finding, downgrade it below the reporting
 threshold, or prevent it from appearing in a report.
 
-Only deterministic rules — check digit failure, an explicit `.nadzorignore`
+Only deterministic rules — check digit failure, an explicit `.vedeiignore`
 entry, a configured filter — remove a finding.
 
 ## Consequences

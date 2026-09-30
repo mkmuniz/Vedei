@@ -15,7 +15,7 @@ module path `/v2`, a Scanner/Analyzer/Pipeline split, and a documented
 
 ## Decision
 
-nadzor imports betterleaks as its secret engine and writes none of its own
+vedei imports betterleaks as its secret engine and writes none of its own
 secret rules. All original effort goes to Brazilian sensitive data, which no
 maintained open-source tool covers.
 

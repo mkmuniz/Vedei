@@ -30,18 +30,18 @@ work it performs.
 
 ## Decision
 
-**A daemon holds the compiled rule set.** `nadzor daemon` listens on a Unix
+**A daemon holds the compiled rule set.** `vedei daemon` listens on a Unix
 socket and answers redaction requests. The rules are compiled once.
 
-**A separate client binary speaks to it.** `nadzor-hook` is 5 MB against
-`nadzor`'s 26 MB, because it imports the socket client and nothing else. It
+**A separate client binary speaks to it.** `vedei-hook` is 5 MB against
+`vedei`'s 26 MB, because it imports the socket client and nothing else. It
 detects nothing itself.
 
 **The socket is Unix-domain only, mode 0600.** There is no TCP mode and there
 should never be one: everything crossing it is text that was just judged
-sensitive. Where nadzor creates the socket's directory it is 0700; where the
+sensitive. Where vedei creates the socket's directory it is 0700; where the
 directory already existed it is left alone and refused if it is world-writable
-without the sticky bit, because chmod on a shared directory is not nadzor's
+without the sticky bit, because chmod on a shared directory is not vedei's
 call to make.
 
 **Nothing requires the daemon.** Every caller falls back to scanning
@@ -52,11 +52,11 @@ Measured result, p95 over 110 calls:
 
 | configuration | p95 |
 | --- | ---: |
-| `nadzor-hook` + daemon | **8.4 ms** |
-| `nadzor hook` + daemon | 15.2 ms |
-| `nadzor hook --fast` | 14.1 ms |
-| `nadzor hook` | 28.9 ms |
-| `nadzor-hook`, no daemon | 36.3 ms |
+| `vedei-hook` + daemon | **8.4 ms** |
+| `vedei hook` + daemon | 15.2 ms |
+| `vedei hook --fast` | 14.1 ms |
+| `vedei hook` | 28.9 ms |
+| `vedei-hook`, no daemon | 36.3 ms |
 
 The budget is met, and without trading away credential detection.
 
@@ -66,10 +66,10 @@ The budget is met, and without trading away credential detection.
 only reason the client loads in 1 ms, but it is one more thing to explain and
 one more thing to keep in step.
 
-**The worst configuration is now reachable by accident.** `nadzor-hook` with no
-daemon is 36.3 ms — slower than `nadzor hook` alone, because it spawns a second
+**The worst configuration is now reachable by accident.** `vedei-hook` with no
+daemon is 36.3 ms — slower than `vedei hook` alone, because it spawns a second
 process to do the work. Anyone who will not run a daemon should configure
-`nadzor hook` directly, and the hook docs lead with that.
+`vedei hook` directly, and the hook docs lead with that.
 
 **A long-lived process is a thing to reason about.** It holds no state beyond
 the compiled rules, logs failures and never requests, and `--idle-timeout`
