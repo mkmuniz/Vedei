@@ -1,6 +1,6 @@
 # The published action lives at the repository root so it can be used as
-# mkmuniz/nadzor@v1 rather than mkmuniz/nadzor/.github/actions/nadzor@v1.
-name: nadzor
+# mkmuniz/vedei@v1 rather than mkmuniz/vedei/.github/actions/vedei@v1.
+name: vedei
 description: >-
   Find Brazilian sensitive data and leaked credentials, validated offline with
   check digits, and upload the result to GitHub Code Scanning.
@@ -37,7 +37,7 @@ inputs:
   report:
     description: Where to write the report.
     required: false
-    default: nadzor.sarif
+    default: vedei.sarif
   upload-sarif:
     description: >-
       Upload the SARIF to Code Scanning. Needs security-events write permission.
@@ -56,10 +56,10 @@ inputs:
     default: "true"
   version:
     description: >-
-      nadzor version to install, or "latest". Leave empty to use a nadzor already
+      vedei version to install, or "latest". Leave empty to use a vedei already
       on PATH — which is how this repository scans itself with the code under
       review rather than with the published release, and how anyone who installs
-      nadzor another way (Homebrew, a pinned binary) skips the install step.
+      vedei another way (Homebrew, a pinned binary) skips the install step.
     required: false
     default: latest
 
@@ -81,19 +81,19 @@ runs:
         go-version: "1.27"
         cache: false
 
-    - name: Install nadzor
+    - name: Install vedei
       if: ${{ inputs.version != '' }}
       shell: bash
-      run: go install github.com/mkmuniz/nadzor/cmd/nadzor@${{ inputs.version }}
+      run: go install github.com/mkmuniz/vedei/cmd/vedei@${{ inputs.version }}
 
-    - name: Check nadzor is available
+    - name: Check vedei is available
       shell: bash
       run: |
-        if ! command -v nadzor >/dev/null 2>&1; then
-          echo "::error::nadzor is not on PATH. Either set the 'version' input, or install it in an earlier step." >&2
+        if ! command -v vedei >/dev/null 2>&1; then
+          echo "::error::vedei is not on PATH. Either set the 'version' input, or install it in an earlier step." >&2
           exit 1
         fi
-        nadzor --version
+        vedei --version
 
     - name: Scan
       id: scan
@@ -116,7 +116,7 @@ runs:
 
         case "$MODE" in
           path)
-            nadzor scan "$SCAN_PATH" "${args[@]}"
+            vedei scan "$SCAN_PATH" "${args[@]}"
             ;;
           diff)
             base="$BASE"
@@ -127,17 +127,17 @@ runs:
               [ -z "$base" ] && base="${PUSH_BEFORE:-}"
             fi
             if [ -z "$base" ] || [ "$base" = "0000000000000000000000000000000000000000" ]; then
-              echo "nadzor: no usable base revision, scanning the tree instead" >&2
-              nadzor scan "$SCAN_PATH" "${args[@]}"
+              echo "vedei: no usable base revision, scanning the tree instead" >&2
+              vedei scan "$SCAN_PATH" "${args[@]}"
             else
-              nadzor diff --base "$base" --head "$HEAD" "${args[@]}"
+              vedei diff --base "$base" --head "$HEAD" "${args[@]}"
             fi
             ;;
           history)
-            nadzor git "$SCAN_PATH" "${args[@]}"
+            vedei git "$SCAN_PATH" "${args[@]}"
             ;;
           *)
-            echo "nadzor: unknown mode '$MODE', want path, diff or history" >&2
+            echo "vedei: unknown mode '$MODE', want path, diff or history" >&2
             exit 1
             ;;
         esac
@@ -158,10 +158,10 @@ runs:
               count=$(python3 -c 'import json,sys; print(len(json.load(open(sys.argv[1]))["runs"][0]["results"]))' "$REPORT" 2>/dev/null || echo 0)
             fi
             echo "findings=$count" >> "$GITHUB_OUTPUT"
-            echo "::warning::nadzor found $count item(s); see the Security tab" >&2
+            echo "::warning::vedei found $count item(s); see the Security tab" >&2
             ;;
           *)
-            echo "::error::nadzor could not complete the scan (exit $code)" >&2
+            echo "::error::vedei could not complete the scan (exit $code)" >&2
             exit "$code"
             ;;
         esac
@@ -179,4 +179,4 @@ runs:
       uses: github/codeql-action/upload-sarif@v3
       with:
         sarif_file: ${{ inputs.report }}
-        category: nadzor
+        category: vedei
