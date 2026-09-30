@@ -228,8 +228,8 @@ func TestScan_VedeiignoreSilencesByFingerprint(t *testing.T) {
 	fp := fingerprint.Of("cpf", testCPF)
 	root := tree(t, map[string]string{
 		".vedeiignore": fp + "  # the CPF in our fixtures\n",
-		"a.txt":         "cpf " + testCPF,
-		"moved/b.txt":   "cpf " + testCPF,
+		"a.txt":        "cpf " + testCPF,
+		"moved/b.txt":  "cpf " + testCPF,
 	})
 
 	res := run(t, root)
@@ -243,7 +243,7 @@ func TestScan_VedeiignoreSilencesByFingerprint(t *testing.T) {
 
 func TestScan_VedeiignorePathRules(t *testing.T) {
 	root := tree(t, map[string]string{
-		".vedeiignore":  "testdata/\n",
+		".vedeiignore":   "testdata/\n",
 		"testdata/a.txt": "cpf " + testCPF,
 		"b.txt":          "cpf " + testCPF,
 	})
