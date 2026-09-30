@@ -19,11 +19,11 @@ $ git commit -m "add config"
 SEVERITY  TYPE  VALUE           WHERE
 error     cpf   ***.***.***-25  bad.txt:1
 
-nadzor: the commit was blocked because the staged changes hold the values above.
+vedei: the commit was blocked because the staged changes hold the values above.
 ```
 
 Defaults to `--min-confidence medium`, because a pre-commit hook that cries wolf
-gets removed. Override with `NADZOR_MIN_CONFIDENCE=low`.
+gets removed. Override with `VEDEI_MIN_CONFIDENCE=low`.
 
 `git commit --no-verify` skips it. That is a feature: a hook you cannot get past
 is a hook people uninstall.
@@ -52,7 +52,7 @@ than no hook: it reports safety it did not check.
 
 ## What they do not cover
 
-- A secret already in history. Use `nadzor git` for that, deliberately.
+- A secret already in history. Use `vedei git` for that, deliberately.
 - A secret in a commit made with `--no-verify`, or pushed before the hook existed.
 - A `pre-commit` hook is per clone and not versioned, so it protects whoever
   installed it and nobody else. The `pre-receive` hook is the one that covers

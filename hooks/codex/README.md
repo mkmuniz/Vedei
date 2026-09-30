@@ -1,9 +1,9 @@
 # Codex
 
 ```bash
-go install github.com/mkmuniz/nadzor/cmd/nadzor@latest
-go install github.com/mkmuniz/nadzor/cmd/nadzor-hook@latest
-nadzor daemon &
+go install github.com/mkmuniz/vedei/cmd/vedei@latest
+go install github.com/mkmuniz/vedei/cmd/vedei-hook@latest
+vedei daemon &
 ```
 
 In `~/.codex/config.toml`:
@@ -11,7 +11,7 @@ In `~/.codex/config.toml`:
 ```toml
 [[hooks]]
 event = "post_tool_use"
-command = "nadzor-hook"
+command = "vedei-hook"
 timeout_ms = 5000
 ```
 
@@ -22,7 +22,7 @@ agent and survives a field being renamed.
 > Codex's hook interface is less settled than Claude Code's. If the event
 > shape has changed, the hook passes it through untouched rather than
 > corrupting it. Check detection itself with
-> `echo '{"output":"cpf 529.982.247-25"}' | nadzor-hook`, and please open an
+> `echo '{"output":"cpf 529.982.247-25"}' | vedei-hook`, and please open an
 > issue.
 
 See [the Claude Code notes](../claude-code/README.md) for the measured cost of

@@ -3,9 +3,9 @@
 ## Install
 
 ```bash
-go install github.com/mkmuniz/nadzor/cmd/nadzor@latest
-go install github.com/mkmuniz/nadzor/cmd/nadzor-hook@latest
-nadzor daemon &            # or install the service file in ../launchd/
+go install github.com/mkmuniz/vedei/cmd/vedei@latest
+go install github.com/mkmuniz/vedei/cmd/vedei-hook@latest
+vedei daemon &            # or install the service file in ../launchd/
 ```
 
 Add to `~/.claude/settings.json`:
@@ -17,7 +17,7 @@ Add to `~/.claude/settings.json`:
       {
         "matcher": "Bash|Read|Grep|Glob",
         "hooks": [
-          { "type": "command", "command": "nadzor-hook", "timeout": 5 }
+          { "type": "command", "command": "vedei-hook", "timeout": 5 }
         ]
       }
     ]
@@ -27,17 +27,17 @@ Add to `~/.claude/settings.json`:
 
 Start a new session. Nothing else changes.
 
-If you would rather not run a daemon, use `"command": "nadzor hook"` instead.
+If you would rather not run a daemon, use `"command": "vedei hook"` instead.
 That is slower — see the table — but it is a single binary and no service.
 
 ## Verify
 
 ```bash
-echo '{"tool_response":"cpf 529.982.247-25"}' | nadzor-hook
+echo '{"tool_response":"cpf 529.982.247-25"}' | vedei-hook
 ```
 
 ```json
-{"tool_response":"cpf ***.***.***-25 [nadzor: cpf redacted]"}
+{"tool_response":"cpf ***.***.***-25 [vedei: cpf redacted]"}
 ```
 
 Then, in a real session: put a valid CPF and a credential in a file and ask
@@ -45,8 +45,8 @@ the agent to read it. The model receives them masked, and your terminal shows
 what was withheld:
 
 ```
-nadzor: redacted stripe-access-token
-nadzor: redacted cpf
+vedei: redacted stripe-access-token
+vedei: redacted cpf
 ```
 
 The report goes to stderr, which the agent shows you and does not send to the
@@ -58,15 +58,15 @@ Measured on an M-series Mac, p95 over 110 calls:
 
 | what you configure | p95 | detects |
 | --- | ---: | --- |
-| `nadzor-hook`, daemon running | **8.4 ms** | everything |
-| `nadzor hook`, daemon running | 15.2 ms | everything |
-| `nadzor hook --fast` | 14.1 ms | Brazilian data only |
-| `nadzor hook` | 28.9 ms | everything |
-| `nadzor-hook`, no daemon | 36.3 ms | everything |
+| `vedei-hook`, daemon running | **8.4 ms** | everything |
+| `vedei hook`, daemon running | 15.2 ms | everything |
+| `vedei hook --fast` | 14.1 ms | Brazilian data only |
+| `vedei hook` | 28.9 ms | everything |
+| `vedei-hook`, no daemon | 36.3 ms | everything |
 
 Detection itself is 258µs. The rest is process startup and compiling 417
 secret rules, which is why the daemon and the small client exist: the daemon
-removes the compilation, and `nadzor-hook` removes most of the startup by not
+removes the compilation, and `vedei-hook` removes most of the startup by not
 linking the rules at all.
 
 `--fast` reaches a similar number by not looking for credentials. The daemon
@@ -85,5 +85,5 @@ structured rather than textual result, a daemon that is down, or any detection
 failure all return the event unchanged. Remove the block above and restart to
 rule it out.
 
-`nadzor daemon status` says whether the daemon is answering. When it is not,
-`nadzor-hook` runs the full binary instead — correct, just slower.
+`vedei daemon status` says whether the daemon is answering. When it is not,
+`vedei-hook` runs the full binary instead — correct, just slower.
