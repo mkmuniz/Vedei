@@ -13,6 +13,7 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/mkmuniz/vedei/detect"
+	"github.com/mkmuniz/vedei/detect/aws"
 	"github.com/mkmuniz/vedei/fingerprint"
 	"github.com/mkmuniz/vedei/redact"
 )
@@ -106,17 +107,13 @@ func (e *Engine) Scan(ctx context.Context, content []byte, meta detect.Metadata)
 		return nil, nil
 	}
 
-	raw := e.detector.DetectString(string(content))
-	if len(raw) == 0 {
-		return nil, nil
-	}
+	text := string(content)
+	raw := e.detector.DetectString(text)
 
 	// One credential found in several places is one finding with several
 	// locations, matching how the Brazilian engine reports.
 	byPrint := make(map[string]*detect.Finding, len(raw))
 	order := make([]string, 0, len(raw))
-
-	text := string(content)
 	for _, f := range raw {
 		if f.Secret == "" {
 			continue
@@ -151,11 +148,47 @@ func (e *Engine) Scan(ctx context.Context, content []byte, meta detect.Metadata)
 		order = append(order, fp)
 	}
 
+	// The one rule vedei owns. betterleaks reports no AWS access key id at all —
+	// measured, not assumed — so this runs alongside it rather than relying on
+	// it. ADR-001 keeps betterleaks the only *imported* corpus; this is a
+	// deliberate, documented exception for a gap that corpus/cases proves.
+	addAWSFindings(text, meta, byPrint, &order)
+
 	out := make([]detect.Finding, 0, len(order))
 	for _, fp := range order {
 		out = append(out, *byPrint[fp])
 	}
 	return out, nil
+}
+
+// addAWSFindings appends vedei's own AWS detections to the finding set, keyed
+// the same way as betterleaks' so a value seen twice stays one finding.
+//
+// An access key id is structural, like a CPF whose check digits close: the shape
+// and the base32 alphabet prove it is well-formed, not that it still works. It
+// is reported High confidence because the prefix-plus-base32 combination is
+// specific — a random 20-character token almost never lands on it — and Unknown
+// validity, because confirming a live key means calling AWS, which is M9.
+func addAWSFindings(text string, meta detect.Metadata, byPrint map[string]*detect.Finding, order *[]string) {
+	for _, m := range aws.Extract(text) {
+		fp := fingerprint.Of(aws.AccessKeyID, m.Value)
+		if existing, seen := byPrint[fp]; seen {
+			existing.Locations = append(existing.Locations, locationOf(text, m.Start, m.End, meta.Path))
+			continue
+		}
+		byPrint[fp] = &detect.Finding{
+			Type:        aws.AccessKeyID,
+			Engine:      "secrets",
+			Redacted:    redact.Mask(m.Value),
+			Raw:         m.Value,
+			Validity:    detect.ValidityUnknown,
+			Confidence:  detect.ConfidenceHigh,
+			Reason:      "AWS access key id: known prefix and base32 body",
+			Fingerprint: fp,
+			Locations:   []detect.Location{locationOf(text, m.Start, m.End, meta.Path)},
+		}
+		*order = append(*order, fp)
+	}
 }
 
 // locationsOf returns every byte range in text holding secret.

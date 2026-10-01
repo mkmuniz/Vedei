@@ -71,11 +71,15 @@ Run the same checks locally with `make security` and `make fuzz`.
 check digits, never identity, and never will (ADR-002). A generated CPF in a
 test fixture is indistinguishable from a real one by arithmetic alone.
 
-**AWS access key IDs are not detected.** Neither the canonical example nor a
-random one: the upstream corpus has no rule for `AKIA…` alone, which is a
-defensible position — an access key ID is an identifier, and the secret access
-key is the credential. For keeping data out of an agent's context it is still a
-gap, and a real one. Stripe, GitHub PAT and Slack tokens are detected. M5.
+**AWS access key IDs are detected; the secret access key is not.** vedei owns one
+rule the upstream corpus lacks: an access key id (`AKIA…`, `ASIA…`) is matched
+structurally — a credential-bearing prefix and a 16-character base32 body. It is
+reported High confidence and Unknown validity, because the shape proves it is
+well-formed, not that it still works. The 40-character *secret* access key has no
+structure to key on and is left to context-based rules, which is a known gap. The
+account-id checksum an access key id also carries is not yet verified; doing so
+would raise confidence and surface the account. Stripe, GitHub PAT and Slack
+tokens are detected by the upstream corpus.
 
 **The daemon is a long-lived process holding a Unix socket.** If you run
 `vedei daemon`, note what it is and is not:
