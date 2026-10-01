@@ -10,3 +10,7 @@ expect titulo-eleitor  862441572097
 expect cns             100000000000007
 
 reject  11111111111    # a repeated digit is not a valid document of any kind
+
+# Space-separated forms, now caught uniformly.
+expect pis             439 12547 83 2
+expect titulo-eleitor  3066 3679 1040

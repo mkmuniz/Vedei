@@ -15,3 +15,9 @@ reject  000.000.000-00     # repeated sequence, invalid by rule even though mod 
 # Shapes that look CPF-ish but are not.
 reject  1234567890         # ten digits, too short
 reject  app version 1.2.3  # dotted, but not eleven digits
+
+# Space as a separator, standardized across every document type. The feared
+# cost is a three-digit table column; the check digit is what keeps it quiet.
+expect cpf  529 982 247 25
+reject  linha 100 200 300 40     # three-digit columns, check digit does not close
+reject  valores 123 456 789 10   # same shape, fails mod 11
