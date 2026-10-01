@@ -1,5 +1,5 @@
 #!/bin/sh
-# nadzor pre-commit hook: refuse a commit that adds a credential or a Brazilian
+# vedei pre-commit hook: refuse a commit that adds a credential or a Brazilian
 # document number.
 #
 #   cp hooks/git/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
@@ -13,13 +13,13 @@
 
 set -u
 
-if ! command -v nadzor >/dev/null 2>&1; then
-    echo "nadzor: not on PATH; skipping the pre-commit scan" >&2
-    echo "  go install github.com/mkmuniz/nadzor/cmd/nadzor@latest" >&2
+if ! command -v vedei >/dev/null 2>&1; then
+    echo "vedei: not on PATH; skipping the pre-commit scan" >&2
+    echo "  go install github.com/mkmuniz/vedei/cmd/vedei@latest" >&2
     exit 0
 fi
 
-nadzor diff --staged --min-confidence "${NADZOR_MIN_CONFIDENCE:-medium}"
+vedei diff --staged --min-confidence "${VEDEI_MIN_CONFIDENCE:-medium}"
 status=$?
 
 case "$status" in
@@ -29,10 +29,10 @@ case "$status" in
     3)
         cat >&2 <<'MSG'
 
-nadzor: the commit was blocked because the staged changes hold the values above.
+vedei: the commit was blocked because the staged changes hold the values above.
 
   Rotate any credential first — it is compromised whether or not it was pushed.
-  Then remove it, or record its fingerprint in .nadzorignore with a reason.
+  Then remove it, or record its fingerprint in .vedeiignore with a reason.
 
   git commit --no-verify   to commit anyway
 MSG
@@ -40,7 +40,7 @@ MSG
         ;;
     *)
         echo "" >&2
-        echo "nadzor: the scan itself failed (exit $status), so nothing was checked." >&2
+        echo "vedei: the scan itself failed (exit $status), so nothing was checked." >&2
         echo "  Fix that rather than assuming the commit is clean." >&2
         echo "  git commit --no-verify   to commit anyway" >&2
         exit 1
