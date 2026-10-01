@@ -1,0 +1,17 @@
+# CPF — true positives and the near-misses that must stay quiet.
+# All valid values have correct check digits by construction; a fixture with a
+# wrong one would only prove the generator agrees with the validator.
+
+expect cpf  529.982.247-25
+expect cpf  52998224725
+expect cpf  111.444.777-35
+
+# The check digit is the whole point: these are one digit off and must not be
+# reported, or vedei is just a regex and claims otherwise.
+reject  529.982.247-00     # last digit wrong, fails mod 11
+reject  111.444.777-30     # check digit does not close
+reject  000.000.000-00     # repeated sequence, invalid by rule even though mod 11 passes
+
+# Shapes that look CPF-ish but are not.
+reject  1234567890         # ten digits, too short
+reject  app version 1.2.3  # dotted, but not eleven digits
