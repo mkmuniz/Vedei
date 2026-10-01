@@ -1,5 +1,5 @@
 #!/bin/sh
-# nadzor pre-receive hook: refuse a push that introduces a credential.
+# vedei pre-receive hook: refuse a push that introduces a credential.
 #
 # Install on the server, in the bare repository:
 #   cp pre-receive /path/to/repo.git/hooks/pre-receive && chmod +x ...
@@ -14,8 +14,8 @@
 
 set -u
 
-if ! command -v nadzor >/dev/null 2>&1; then
-    echo "nadzor: not on PATH on the server; the push was not scanned" >&2
+if ! command -v vedei >/dev/null 2>&1; then
+    echo "vedei: not on PATH on the server; the push was not scanned" >&2
     exit 0
 fi
 
@@ -29,9 +29,9 @@ while read -r old new _ref; do
     if [ "$old" = "$zero" ]; then
         # A new branch: there is no base to diff against, so every blob it
         # carries that is not already reachable is new to us.
-        nadzor git . --rev "$new" --min-confidence "${NADZOR_MIN_CONFIDENCE:-medium}" || status=$?
+        vedei git . --rev "$new" --min-confidence "${VEDEI_MIN_CONFIDENCE:-medium}" || status=$?
     else
-        nadzor diff --base "$old" --head "$new" --min-confidence "${NADZOR_MIN_CONFIDENCE:-medium}" || status=$?
+        vedei diff --base "$old" --head "$new" --min-confidence "${VEDEI_MIN_CONFIDENCE:-medium}" || status=$?
     fi
 done
 
@@ -42,19 +42,19 @@ case "$status" in
     3)
         cat >&2 <<'MSG'
 
-nadzor: the push was rejected because it introduces the values above.
+vedei: the push was rejected because it introduces the values above.
 
   Rotate the credential. It should be treated as compromised from the moment it
   was written down, not from the moment it is pushed.
 
   Then rewrite the commits that carry it — removing it in a new commit leaves the
-  blob reachable, and "nadzor git" will still find it.
+  blob reachable, and "vedei git" will still find it.
 MSG
         exit 1
         ;;
     *)
         echo "" >&2
-        echo "nadzor: the scan failed on the server (exit $status); the push was rejected" >&2
+        echo "vedei: the scan failed on the server (exit $status); the push was rejected" >&2
         echo "  because nothing was actually checked." >&2
         exit 1
         ;;
