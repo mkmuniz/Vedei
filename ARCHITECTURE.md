@@ -122,7 +122,7 @@ const (
      │              (ex.: node_modules, testdata, binario)
      │
  [2] extract        regex por detector, tolerante a mascara
-     │              123.456.789-09 / 12345678909 / 123.456.78909
+     │              123.456.789-09 / 12345678909 / 123 456 789 09
      │
  [3] validate       digito verificador | Luhn | ISPB | estrutura
      │              -> invalido morre aqui, nao vira achado
@@ -137,7 +137,7 @@ const (
 
 Etapa 3 é o que separa vedei de um scanner de regex. Um `grep` de CPF acha `000.000.000-00`; vedei não, porque o dígito não fecha.
 
-**Divergência conhecida na etapa 2.** "Tolerante a máscara" não é uniforme entre detectores. CNS, título e PAN aceitam espaço como separador; CPF, CNPJ e PIS aceitam só `.`, `-` e `/`. Então `529 982 247 25` **não** é detectado como CPF hoje. Isso foi descoberto escrevendo um teste que assumia o contrário, e é uma decisão de calibração, não um esquecimento: aceitar espaço no CPF casa com qualquer coluna de tabela de três dígitos, e medir esse custo é justamente o que o corpus do M5 existe para fazer. Até lá o comportamento está documentado aqui em vez de prometido no código.
+**Separadores de máscara, padronizados (M5).** Todo detector aceita o mesmo conjunto entre grupos de dígitos: a pontuação própria do documento, um espaço, um tab, ou nada — **nunca** uma quebra de linha. Antes disso havia duas divergências: CNS e título usavam `[\s.]`, e `\s` casa `\n`, então casavam um valor partido em duas linhas (o mesmo bug que o padrão de cartão já evitava); e CPF, CNPJ e PIS recusavam espaço, então `529 982 247 25` não era detectado. O medo de aceitar espaço era casar coluna de tabela de três dígitos — medido contra o corpus, o dígito verificador mantém essas colunas quietas, então a precision ficou em 1.000. A medição está em `corpus/cases/cpf.txt`.
 
 ---
 

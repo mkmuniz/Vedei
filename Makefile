@@ -6,7 +6,7 @@ HOOKBIN := vedei-hook
 VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 LDFLAGS := -s -w -X main.version=$(VERSION)
 
-.PHONY: build test lint bench cover clean install-tools all fuzz security vuln sast latency
+.PHONY: build test lint bench cover clean install-tools all fuzz security vuln sast latency corpus
 
 all: lint test build
 
@@ -49,6 +49,12 @@ FUZZ_DETECT := FuzzValidatorsNeverPanic FuzzExtractYieldsOnlyValidValues \
 FUZZ_TRANSCRIPT := FuzzScrubRecord_PreservesMeaning FuzzScrubRecord_NumbersSurviveExactly \
                    FuzzScrubRecord_RedactionKeepsItValid FuzzReadableText
 FUZZ_SCAN := FuzzParseIgnore FuzzIgnoreStack FuzzIsBinary
+
+# The labeled precision/recall corpus. Separate from the unit tests because it
+# is the number that answers "is this getting noisier", and worth running on its
+# own when calibrating.
+corpus:
+	go test -v -run TestCorpus ./corpus/
 
 fuzz:
 	@for t in $(FUZZ_DETECT); do \

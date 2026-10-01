@@ -72,6 +72,22 @@ a83871a7916f6b9c44907082aa289cfc  # +***********21 - a second phone in the same 
 d554cea51a6155fd70c74664b448aff2  # +***********94 - a third
 9ee2bb2c7f2a591ab50bb3070faa1a6d  # a UUID v4 Pix key, in the overlap test
 
+# --- M5 corpus and test fixtures ---
+# The labeled corpus and the mask/AWS tests carry example values on purpose.
+# Fingerprinted, not path-ignored, so the principle holds: every value is named,
+# and a real secret committed into these files would still be reported.
+d0dead6eceff137cafd15c0029bf1214  # AKIA...LE example key in corpus
+a8cadd7b8a5caff89d90408d8a6c31bc  # AKIA...TQ assembled test key
+e58b0b5d6b990a005bb44e5d490a851e  # ASIA...TQ assembled test key
+2ffebaa6e81961e4cef8beeb61c5f8d1  # generated CNH vector
+648782aa9ca9e35c33bddea812bb255f  # generated CNH vector
+2040ad664a71a504a6ff863b0b78a4f0  # generated PIS vector, space-separated
+4d4eb30077a44f6a1e088b2c4cff6f1d  # generated PIS vector
+62949e15935851bd24d617292e7230f8  # generated titulo vector, space-separated
+f60e47e7fe914c3e5d10a9b2a99d8b96  # generated titulo vector
+ec2a7642f9821664294f09e54573ca66  # generated CNS vector
+83f7388d806b21f4c0c4ea6e6a651937  # Pix email key fixture
+
 # Nothing is ignored by path, on purpose. Silencing *_test.go wholesale would
 # also silence a credential genuinely committed into a test, which is a place
 # credentials genuinely end up. Every entry above is one value, named.

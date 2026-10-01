@@ -1,0 +1,22 @@
+# The precision corpus proper: things that pass a checksum or match a shape by
+# accident. Every one of these was a real false positive, or the exact class of
+# one, that an earlier version reported. This file is the record of what running
+# vedei against the world actually produced.
+
+# A Go module pseudo-version. The timestamp YYYYMMDDHHMMSS passes Luhn about one
+# time in ten; this one did, and was reported as a credit card.
+reject  v0.0.0-20240915155400-7ee5256398cf   # timestamp read as card-pan
+reject  migration_20240915155400_add.sql     # same timestamp, in a filename
+
+# A UUID. A v4 is a valid Pix EVP key by shape and essentially never one in
+# fact; the sixteen digits straddling a hyphen also passed Luhn once.
+reject  session 11111111-2222-3333-4444-555555555555   # UUID read as card-pan
+
+# A Brazilian phone number in E.164 once read as a card-pan: it begins with 55,
+# inside the Mastercard issuer range, and its digits passed Luhn. That reading is
+# gone. It is still a Pix key by type, which is correct and lives in pix.txt — the
+# bare number here must simply never be a card.
+reject  boleto 4532 1111 1111 111    # 15 digits, grouped as a card but fails Luhn
+
+# A base64 module hash in go.sum: entropy by design, not a secret.
+reject  h1:o1uxfymjZ7jZ4MsgCErcwWGtVKSiNAXtS59Lhs6uI/g=   # go.sum hash

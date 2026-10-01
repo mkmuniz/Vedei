@@ -39,17 +39,32 @@ type Match struct {
 //
 // Second, patterns accept the masks a document actually circulates in, not
 // only the canonical one.
+// A document's digit groups are written apart by one separator: its own
+// punctuation, or a space, or a tab, or nothing. The separator classes below
+// all include " \t" and none include "\s".
+//
+// That is a correctness fix, not only a tidy-up. CNS and título used "[\s.]",
+// and \s matches a line break, so both matched a value that straddled a
+// newline — the same bug the card-number pattern was already written to avoid.
+// Space and tab are allowed everywhere now; "\n" is allowed nowhere. Which
+// means a CPF written "529 982 247 25" is finally caught, uniformly with the
+// documents that already tolerated spaces.
+//
+// Whether admitting a space widens false positives is a precision question, and
+// it is answered by the corpus rather than guessed: a three-column table of
+// three-digit numbers is the feared case, and corpus/cases has it, kept quiet by
+// the check digit that a table column does not satisfy.
 var patterns = []struct {
 	kind Kind
 	re   *regexp.Regexp
 }{
 	{KindE2EID, regexp.MustCompile(`[Ee][0-9]{8}[0-9]{12}[0-9A-Za-z]{11}`)},
-	{KindCNPJ, regexp.MustCompile(`[0-9A-Za-z]{2}\.?[0-9A-Za-z]{3}\.?[0-9A-Za-z]{3}/?[0-9A-Za-z]{4}-?[0-9]{2}`)},
-	{KindCNS, regexp.MustCompile(`[1-2789][0-9]{2}[\s.]?[0-9]{4}[\s.]?[0-9]{4}[\s.]?[0-9]{4}`)},
-	{KindTitulo, regexp.MustCompile(`[0-9]{4}[\s.]?[0-9]{4}[\s.]?[0-9]{4}`)},
+	{KindCNPJ, regexp.MustCompile(`[0-9A-Za-z]{2}[ \t.]?[0-9A-Za-z]{3}[ \t.]?[0-9A-Za-z]{3}[ \t/]?[0-9A-Za-z]{4}[ \t-]?[0-9]{2}`)},
+	{KindCNS, regexp.MustCompile(`[1-2789][0-9]{2}[ \t.]?[0-9]{4}[ \t.]?[0-9]{4}[ \t.]?[0-9]{4}`)},
+	{KindTitulo, regexp.MustCompile(`[0-9]{4}[ \t.]?[0-9]{4}[ \t.]?[0-9]{4}`)},
 	{KindPAN, panRe},
-	{KindCPF, regexp.MustCompile(`[0-9]{3}\.?[0-9]{3}\.?[0-9]{3}[-.]?[0-9]{2}`)},
-	{KindPIS, regexp.MustCompile(`[0-9]{3}\.?[0-9]{5}\.?[0-9]{2}-?[0-9]`)},
+	{KindCPF, regexp.MustCompile(`[0-9]{3}[ \t.]?[0-9]{3}[ \t.]?[0-9]{3}[ \t.-]?[0-9]{2}`)},
+	{KindPIS, regexp.MustCompile(`[0-9]{3}[ \t.]?[0-9]{5}[ \t.]?[0-9]{2}[ \t-]?[0-9]`)},
 	{KindCNH, regexp.MustCompile(`[0-9]{11}`)},
 }
 

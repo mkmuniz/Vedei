@@ -132,7 +132,7 @@ Registros completos em [`docs/adr/`](docs/adr/).
 | M2 | Motor de segredos via betterleaks | ✅ |
 | M3 | **MVP — superfície de IA** | ✅ |
 | M4 | CLI, CI/CD, SARIF, scrub de transcript | ✅ |
-| M5 | Corpus multilíngue + calibração pt-BR | ⬜ |
+| M5 | Corpus multilíngue + calibração pt-BR | 🚧 |
 | M6 | SDK de runtime | ⬜ |
 | M7 | Camada de IA | ⬜ |
 | M8 | Coletor de observabilidade | ⬜ |
@@ -157,7 +157,7 @@ stream/           # stdin -> stdout, o caminho do MVP
 daemon/           # servidor e cliente do socket Unix — o caminho de 8,4 ms
 transcript/       # leitor de log de sessao de agente
 hooks/            # hooks de agente, hooks de git, units de launchd e systemd
-corpus/           # corpus multilingue de falso positivo
+corpus/           # harness rotulado de precision/recall (make corpus)
 ```
 
 ## O nome

@@ -1,0 +1,9 @@
+# Pix keys. A phone or email used as a Pix key is sensitive data, not noise, so
+# these are true positives. The phone is the one that used to be read as a card.
+
+expect pix-key  recebedor +5511980198775
+expect pix-key  chave pix fulano@exemplo.com.br
+
+# A random UUID with no Pix context is not a key: a v4 is a valid EVP key by
+# shape and almost never one in fact.
+reject  trace 11111111-2222-3333-4444-555555555555   # UUID, no Pix context

@@ -484,3 +484,56 @@ func TestExtract_PlusAfterAValueIsStillABoundary(t *testing.T) {
 		}
 	}
 }
+
+// The separator standardization is also a bug fix: CNS and título used [\s.],
+// and \s matches a line break, so a value split across two lines matched as one.
+// The card-number pattern was already written to avoid exactly this; now every
+// document type does. Space and tab separate groups; a newline never does.
+func TestExtract_SeparatorNeverCrossesALine(t *testing.T) {
+	// A valid CNS and a valid título, each split by a newline where a separator
+	// would go. Neither may be reported.
+	for _, text := range []string{
+		"100000000000007", // valid CNS, as a control it IS found when whole
+	} {
+		if len(Extract(text)) == 0 {
+			t.Fatalf("control failed: %q should be found when whole", text)
+		}
+	}
+
+	for _, text := range []string{
+		"100\n000000000007", // CNS split across a newline
+		"1000000\n00000007",
+		"3066\n3679\n1040",  // título split across newlines
+		"529\n982\n247\n25", // CPF split across newlines
+	} {
+		for _, m := range Extract(text) {
+			// A match is only a bug if it spans the newline. A fragment on one
+			// line that happens to be valid on its own is fine.
+			if strings.Contains(m.Value, "\n") {
+				t.Errorf("%q matched across a newline: %q", text, m.Value)
+			}
+		}
+	}
+}
+
+// Space and tab are accepted uniformly now, which they were not before: CPF,
+// CNPJ and PIS rejected a space outright.
+func TestExtract_SpaceAndTabAreUniformSeparators(t *testing.T) {
+	cases := map[string]Kind{
+		"529 982 247 25":    KindCPF,
+		"529\t982\t247\t25": KindCPF,
+		"439 12547 83 2":    KindPIS,
+		"3066 3679 1040":    KindTitulo,
+	}
+	for text, want := range cases {
+		found := false
+		for _, m := range Extract(text) {
+			if m.Kind == want {
+				found = true
+			}
+		}
+		if !found {
+			t.Errorf("%q was not found as %s", text, want)
+		}
+	}
+}
