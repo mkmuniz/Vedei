@@ -133,7 +133,7 @@ Full records in [`docs/adr/`](docs/adr/).
 | M2 | Secret engine via betterleaks | ✅ |
 | M3 | **MVP — AI agent surface** | ✅ |
 | M4 | CLI, CI/CD, SARIF, transcript scrub | ✅ |
-| M5 | Multilingual false-positive corpus + pt-BR calibration | ⬜ |
+| M5 | Multilingual false-positive corpus + pt-BR calibration | 🚧 |
 | M6 | Runtime SDK | ⬜ |
 | M7 | AI layer | ⬜ |
 | M8 | Observability collector | ⬜ |
@@ -149,16 +149,16 @@ Features, implementation steps, test strategy and exit criteria per stage: [`MIL
 ```
 detect/br/        # the core: pure validators, zero dependencies
 detect/engine.go  # the Engine interface — insulation from betterleaks' v2 API
-engine/secrets/   # betterleaks wrapped behind that interface
+detect/aws/       # AWS access key ids — the one secret rule vedei owns
+engine/secrets/   # betterleaks wrapped behind that interface, plus detect/aws
 redact/           # format-preserving redaction
-report/           # JSON, JSONL, SARIF
-scan/             # directory walker, gitignore matcher, git history
 report/           # table, JSON, JSONL, SARIF
+scan/             # directory walker, gitignore matcher, git history
 stream/           # stdin -> stdout, the MVP path
 daemon/           # Unix socket server and client — the 8.4 ms path
 transcript/       # agent session log reader
 hooks/            # agent hooks, git hooks, launchd and systemd units
-corpus/           # multilingual false-positive corpus
+corpus/           # labeled precision/recall harness (make corpus)
 ```
 
 ## The name
