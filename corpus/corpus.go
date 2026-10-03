@@ -1,11 +1,12 @@
 // Package corpus loads the labeled examples that measure detection quality.
 //
 // It is the measurement tool the milestones call for: a scanner's worth is not
-// "does it compile" but "what does it catch and what does it cry wolf over",
-// and in Portuguese the second question is the hard one. The upstream secret
-// rules score candidates against an English dictionary, so a Portuguese word
-// like "senhapadrao" reads as random and is reported. That cost is only visible
-// against labeled data, which is what this package is.
+// "does it compile" but "what does it catch and what does it cry wolf over".
+// Neither question can be answered by reasoning about the rules. M5 set out
+// expecting Portuguese placeholders to be reported as secrets; measured against
+// labeled cases, they were not — the real gap was the reverse, credentials
+// under Portuguese key names going unfound. Only labeled data shows which
+// way a bias runs, which is what this package is.
 //
 // A case file is plain text, one directive per line:
 //

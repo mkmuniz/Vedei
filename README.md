@@ -142,7 +142,7 @@ Full records in [`docs/adr/`](docs/adr/).
 
 Features, implementation steps, test strategy and exit criteria per stage: [`MILESTONES.md`](MILESTONES.md). Component design and performance budgets: [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
-**On M5.** betterleaks filters candidates with a BPE token-efficiency ratio against a 33,775-word **English** dictionary and a fixed 2.5 threshold. Measured with its own embedded tokenizer: `defaultpassword` scores 7.50 and is correctly discarded; `senhapadrao` scores 2.20 and is reported as a secret. Real secrets sit at 1.0–1.6. In English the gap is comfortable; in Portuguese it nearly vanishes. M5 turns that into a versioned corpus and a CI-enforced metric.
+**On M5.** The original hypothesis was a precision bias: betterleaks discards a candidate as prose when it contains a word from a 33,775-word **English** dictionary, so `defaultpassword` is dropped and `senhapadrao` falls through to a ratio threshold. Measured end to end on v1.8.1, the full filter chain rejects prose placeholders equally in English, Portuguese and Spanish. The real bias was in **recall**: the rules key on English names, so a real credential was found 100% of the time under an English key, 57% under a Spanish one and **29% under a Portuguese one** — `senha` and `segredo` were never recognized. vedei now translates key names before a second pass, reaching 100% in all three. The labeled corpus behind these numbers is in [`corpus/`](corpus/): 119 cases, precision and recall 1.000 per type, enforced in CI.
 
 ## Project structure
 

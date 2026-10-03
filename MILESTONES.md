@@ -424,37 +424,46 @@ pendência.
 
 **Objetivo.** Transformar falso positivo de opinião em métrica, e corrigir um viés medido.
 
-### O problema, com número
+### A hipótese original — e o que a medição mostrou
 
-O filtro de token efficiency do betterleaks usa dicionário de 33.775 palavras **em inglês** e limiar fixo de 2,5 caracteres por token. Medido com o tokenizador que ele mesmo embute:
+**A hipótese era de precision.** O filtro de token efficiency do betterleaks descarta um candidato como prosa quando ele contém uma palavra de um dicionário de 33.775 palavras **em inglês**; senão compara a razão caracteres/token com 2,5. Medida isolada, essa razão dava `senhapadrao` = 2,20 e `defaultpassword` = 7,50, e daí se concluiu que placeholder em português seria reportado como segredo.
 
-| String | Razão | Resultado |
-|---|---:|---|
-| `defaultpassword` | 7,50 | descartado, correto |
-| `senhapadrao` | **2,20** | **reportado como segredo** |
-| `cobrancaboleto` | **2,33** | **reportado como segredo** |
-| segredo real | 1,0–1,6 | reportado, correto |
+**Medido de ponta a ponta (betterleaks v1.8.1), não é.** Só a regra `generic-api-key` usa esse filtro, e a cadeia completa rejeita placeholders em prosa nos três idiomas igualmente — 0 de 30 em inglês, português e espanhol. A conclusão vinha de olhar a razão fora da cadeia de filtros.
 
-Em inglês a separação entre prosa e segredo é confortável. Em português quase some. Ninguém mediu isso.
+**O viés real era de recall, e era maior.** As regras reconhecem nomes de chave em inglês. Com o mesmo segredo real sob nomes equivalentes:
 
-### O que implementar
+| idioma da chave | segredos reais achados |
+|---|---:|
+| inglês | 100% |
+| espanhol | 57% |
+| português | **29%** |
 
-1. Dicionário pt-BR embutido, mesmo mecanismo `go:embed` + gzip
-2. `--locale pt-BR`, com detecção automática do idioma predominante do repositório
-3. **`corpus/`** — strings reais de código em pt, en, es, com rótulo esperado
-4. `make fp-report` — imprime precisão e recall do conjunto; **falha o CI se regredir**
-5. Publicar a medição como issue no betterleaks
+`senha`, `segredo` e `senha_banco` nunca eram reconhecidos. As chaves em português que funcionavam (`chave_api`, `token_acesso`) funcionavam só por conter `api` e `token`.
+
+### O que foi implementado
+
+1. **`corpus/`** com formato rotulado (`expect` / `reject`), gate estrito e métrica **por tipo** — ✅
+2. **Passada de localização** em `engine/secrets/localize.go`: nomes de chave em português e espanhol que recebem atribuição são traduzidos (`senha`→`password`, `segredo`→`secret`, `chave`→`key`…) e o texto é escaneado de novo pelas **mesmas regras**. Valores nunca são reescritos, então o segredo é localizado no texto original. Os filtros do upstream — que também têm inglês embutido — se aplicam inteiros, o que dá paridade em vez de uma regra paralela com precision própria — ✅
+3. **Reordenação head-final**: português e espanhol nomeiam `senha_banco`; inglês nomeia `db_password`, e a regra do upstream exige fronteira de palavra logo depois de `password`, então `password_db` falha até em inglês. A tradução move `password` para o fim — ✅
+
+Resultado, mesmos valores sob chaves equivalentes: recall **100%** em português e espanhol (inglês 88%, por causa do `password_db` que o próprio upstream perde). Falsos positivos com placeholders são iguais por chave nos três idiomas.
+
+**Não implementado, e por quê:** o dicionário pt-BR para o filtro de token efficiency (itens 1–2 do plano original). A medição mostrou que ele não corrigiria nada.
+
+### Achado lateral — fora do escopo do M5
+
+A `generic-password` do upstream reporta placeholders instrucionais com confiança baixa **em qualquer idioma**: `"your-password-here"`, `"replace_me"`, `"changeme"` e seus equivalentes `"sua-senha-aqui"`, `"troque_isto"` — 5 de 10 em cada idioma. Referências (`${VAR}`, `os.getenv`, `<marcador>`) são suprimidas corretamente nos três. É fraqueza de precision do upstream, neutra de idioma; candidata a issue no betterleaks ou a um filtro do vedei num marco próprio.
 
 ### Como testar
 
-O próprio `make fp-report` é o teste. Roda no CI, com limiar mínimo travado.
+`make corpus` (também roda em `go test ./...`, portanto no CI). A tabela por tipo aparece no log.
 
 ### Critério de saída
 
-- [ ] `corpus/` com ≥ 500 casos rotulados, em 3 idiomas
-- [ ] `make fp-report` no CI, falhando em regressão
-- [ ] Número de precisão publicado no README
-- [ ] Issue aberta no betterleaks com a medição
+- [ ] `corpus/` com ≥ 500 casos rotulados, em 3 idiomas — **119 hoje, nos 3 idiomas**
+- [x] Corpus no CI, falhando em regressão — `corpus_test.go` roda dentro de `go test ./...`
+- [x] Número publicado no README — recall por idioma e precision/recall por tipo
+- [ ] Issue aberta no betterleaks com a medição (recall por idioma + `password_db`)
 
 **Risco:** nenhum técnico. É curadoria — chato, e é por isso que ninguém fez.
 

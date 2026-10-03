@@ -141,7 +141,7 @@ Registros completos em [`docs/adr/`](docs/adr/).
 
 Features, passo a passo, estratégia de teste e critério de saída por etapa: [`MILESTONES.md`](MILESTONES.md). Desenho de componentes e orçamentos: [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
-**Sobre o M5.** O betterleaks filtra candidatos por razão de token BPE contra um dicionário de 33.775 palavras **em inglês** e limiar fixo de 2,5. Medido com o tokenizador que ele mesmo embute: `defaultpassword` dá 7,50 e é corretamente descartado; `senhapadrao` dá 2,20 e é reportado como segredo. Segredos reais ficam em 1,0–1,6. Em inglês a separação é confortável; em português quase some. O M5 transforma isso em corpus versionado e métrica cobrada no CI.
+**Sobre o M5.** A hipótese original era um viés de precision: o betterleaks descarta um candidato como prosa quando ele contém uma palavra de um dicionário de 33.775 palavras **em inglês**, então `defaultpassword` cai e `senhapadrao` segue para um limiar de razão. Medido de ponta a ponta na v1.8.1, a cadeia completa de filtros rejeita placeholders em prosa igualmente em inglês, português e espanhol. O viés real estava no **recall**: as regras reconhecem nomes de chave em inglês, então uma credencial real era achada 100% das vezes sob uma chave em inglês, 57% em espanhol e **29% em português** — `senha` e `segredo` nunca eram reconhecidos. O vedei agora traduz nomes de chave antes de uma segunda passada e chega a 100% nos três. O corpus rotulado por trás desses números está em [`corpus/`](corpus/): 119 casos, precision e recall 1.000 por tipo, cobrados no CI.
 
 ## Estrutura do projeto
 

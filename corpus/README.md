@@ -3,10 +3,12 @@
 Labeled examples that measure what vedei catches and what it cries wolf over.
 
 A scanner's worth is not that it compiles. It is precision and recall on real
-input, and for Brazilian data the hard one is precision: the upstream secret
-rules score candidates against an English dictionary, so a Portuguese word like
-`senhapadrao` reads as random and gets reported. That cost is invisible until
-you measure it against labeled data. This directory is that data.
+input, and neither can be settled by reading the rules. M5 assumed Portuguese
+placeholders like `senhapadrao` would be reported as secrets; measured here,
+they were not. The real gap ran the other way: a credential under a Portuguese
+key name was found 29% of the time, against 100% under an English one. That is
+what labeled data is for — it tells you which way a bias runs. This directory
+is that data.
 
 ## Format
 
