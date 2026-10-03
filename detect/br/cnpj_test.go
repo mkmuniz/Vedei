@@ -17,7 +17,7 @@ func TestCNPJ_GeneratedNumericAreValid(t *testing.T) {
 	}
 }
 
-// The alphanumeric format has been in force since 2026-07-06.
+// The alphanumeric format has been issued since 2026-07-31.
 func TestCNPJ_GeneratedAlphanumericAreValid(t *testing.T) {
 	r := rand.New(rand.NewSource(11))
 	for i := 0; i < genCases; i++ {

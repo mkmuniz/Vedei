@@ -60,7 +60,7 @@ Wire the hook into your agent: [`hooks/`](hooks/). Two binaries, because the spl
 | **CPF** | ✅ | Mod 11, two check digits; repeated-sequence rejection |
 | **CIN** | ✅ | Uses the CPF as the national number — same validation |
 | **CNPJ** numeric | ✅ | Mod 11, weights `5,4,3,2,9,8,7,6,5,4,3,2` |
-| **CNPJ** alphanumeric | ✅ | Mod 11 with `ASCII − 48` for letters — **in force since 2026-07-06** |
+| **CNPJ** alphanumeric | ✅ | Mod 11 with `ASCII − 48` for letters — **first issued on 2026-07-31** ([Receita Federal](https://www.gov.br/receitafederal/pt-br/assuntos/noticias/2026/julho/receita-federal-gera-o-primeiro-cnpj-em-formato-alfanumerico)) |
 | **CNH** | ✅ | Mod 11, 11-digit variant |
 | **PIS / NIS / NIT** | ✅ | Mod 11, weights `3,2,9,8,7,6,5,4,3,2` |
 | **Título de eleitor** | ✅ | Two check digits, mod 11, embedded state code |

@@ -12,7 +12,7 @@ var cnpjWeights = [12]int{5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2}
 // ValidateCNPJ reports whether s is a structurally valid CNPJ, in either the
 // numeric or the alphanumeric format.
 //
-// Since 2026-07-06 the Receita Federal issues alphanumeric CNPJs: the first
+// Since 2026-07-31 the Receita Federal issues alphanumeric CNPJs: the first
 // twelve positions may hold 0-9 and A-Z, while the last two remain numeric
 // check digits. Letters enter the mod-11 sum as their ASCII value minus 48,
 // so 'A' (65) contributes 17. Existing numeric CNPJs are unchanged, and a

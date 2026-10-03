@@ -190,7 +190,7 @@ func FuzzCPFCheckDigits(f *testing.F) {
 }
 
 // FuzzCNPJCheckDigits does the same for both CNPJ formats. The alphanumeric one
-// takes effect on 2026-07-06 and its weighting reads a letter as its ASCII code
+// was first issued on 2026-07-31 and its weighting reads a letter as its ASCII code
 // minus 48, which is the part most likely to be got wrong.
 func FuzzCNPJCheckDigits(f *testing.F) {
 	f.Add("112223330001", false)

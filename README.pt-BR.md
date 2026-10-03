@@ -59,7 +59,7 @@ Depois ligue o hook no seu agente: [`hooks/`](hooks/). São dois binários, e é
 | **CPF** | ✅ | Módulo 11, dois DVs; rejeita sequências repetidas |
 | **CIN** | ✅ | Usa o CPF como número nacional — mesma validação |
 | **CNPJ** numérico | ✅ | Módulo 11, pesos `5,4,3,2,9,8,7,6,5,4,3,2` |
-| **CNPJ** alfanumérico | ✅ | Módulo 11 com `ASCII − 48` nas letras — **vigente desde 06/07/2026** |
+| **CNPJ** alfanumérico | ✅ | Módulo 11 com `ASCII − 48` nas letras — **primeiro emitido em 31/07/2026** ([Receita Federal](https://www.gov.br/receitafederal/pt-br/assuntos/noticias/2026/julho/receita-federal-gera-o-primeiro-cnpj-em-formato-alfanumerico)) |
 | **CNH** | ✅ | Módulo 11, variante de 11 dígitos |
 | **PIS / NIS / NIT** | ✅ | Módulo 11, pesos `3,2,9,8,7,6,5,4,3,2` |
 | **Título de eleitor** | ✅ | Dois DVs, módulo 11, com código de UF |
