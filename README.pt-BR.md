@@ -59,7 +59,7 @@ Depois ligue o hook no seu agente: [`hooks/`](hooks/). São dois binários, e é
 | **CPF** | ✅ | Módulo 11, dois DVs; rejeita sequências repetidas |
 | **CIN** | ✅ | Usa o CPF como número nacional — mesma validação |
 | **CNPJ** numérico | ✅ | Módulo 11, pesos `5,4,3,2,9,8,7,6,5,4,3,2` |
-| **CNPJ** alfanumérico | ✅ | Módulo 11 com `ASCII − 48` nas letras — **vigente desde 06/07/2026** |
+| **CNPJ** alfanumérico | ✅ | Módulo 11 com `ASCII − 48` nas letras — **primeiro emitido em 31/07/2026** ([Receita Federal](https://www.gov.br/receitafederal/pt-br/assuntos/noticias/2026/julho/receita-federal-gera-o-primeiro-cnpj-em-formato-alfanumerico)) |
 | **CNH** | ✅ | Módulo 11, variante de 11 dígitos |
 | **PIS / NIS / NIT** | ✅ | Módulo 11, pesos `3,2,9,8,7,6,5,4,3,2` |
 | **Título de eleitor** | ✅ | Dois DVs, módulo 11, com código de UF |
@@ -87,7 +87,7 @@ Base de ISPB do [`guibranco/BancosBrasileiros`](https://github.com/guibranco/Ban
 
 ## Por que existe
 
-Detecção de segredo é problema resolvido e concorrido — betterleaks tem 463 regras, kingfisher 1.051. Reconstruir esse corpus é perder. Então o vedei **importa o betterleaks** (MIT) e gasta tudo no que ninguém construiu: **dado sensível brasileiro**. Nenhuma ferramenta open source mantida detecta CPF, CNPJ, CNH, chave Pix, PAN e E2EID. Não é mal servido — é vazio.
+Detecção de segredo é problema resolvido e concorrido — betterleaks tem 463 regras, kingfisher 1.051. Reconstruir esse corpus é perder. Então o vedei **importa o betterleaks** (MIT) e concentra o esforço onde as ferramentas globais são mais fracas: **dado sensível brasileiro**, validado por dígito verificador em vez de casado por formato — CPF, CNPJ inclusive o alfanumérico, CNH, chave Pix e E2EID, PAN de cartão com bandeiras brasileiras. E aplica o controle na fronteira por onde o dado sai: o contexto do agente, a execução de CI, a linha de log. Um binário Go, sem runtime, sem rede.
 
 A segunda razão é arquitetural. O betterleaks valida segredo perguntando ao provedor por HTTP, o que exige rate limiter, orçamento de timeout e cuidado com o destino das requisições. Dado pessoal brasileiro não funciona assim: CPF é módulo 11, cartão é Luhn, chave Pix é o tipo dela. **Tudo offline.** Sem rede, sem limite de vazão, sem superfície de SSRF. Mais simples e mais seguro, não só diferente.
 
@@ -162,9 +162,9 @@ corpus/           # harness rotulado de precision/recall (make corpus)
 
 ## O nome
 
-**Надзор** (*vedei*) é "supervisão" ou "fiscalização" em russo — a palavra usada para supervisão regulatória. É `dozor` (a ronda) com o prefixo `nad-` (sobre, acima).
+**Vedei** é o verbo *vedar* na primeira pessoa do pretérito perfeito — vedar como quem impede a passagem, como quem tampa uma fresta.
 
-Uma ferramenta que inspeciona o que passa por uma fronteira e aplica uma regra sobre isso não é um guarda. É fiscalização.
+É o que diz quem usa a ferramenta depois que ela fez o trabalho dela. O CPF não chegou ao modelo, a chave não chegou ao log, o número do cartão não chegou ao commit. Vedei.
 
 ## Contribuir · Segurança · Licença
 

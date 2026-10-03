@@ -1,7 +1,13 @@
-# CNPJ — numeric and the alphanumeric format in force from 2026-07-06.
+# CNPJ — numeric and the alphanumeric format first issued on 2026-07-31.
 
 expect cnpj  11.222.333/0001-81
 expect cnpj  11222333000181
+
+# The first alphanumeric CNPJ the Receita Federal ever issued, on 2026-07-31: a
+# Banco do Brasil branch. Not a generated vector — the real one, published by
+# the Receita, so it proves the algorithm against the authority, not against
+# itself.
+expect cnpj  00.000.000/E08G-12
 
 expect cnpj  00.000.000/0001-91   # the Uniao's CNPJ: body all zeros, but check digits close
 

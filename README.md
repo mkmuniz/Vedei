@@ -60,7 +60,7 @@ Wire the hook into your agent: [`hooks/`](hooks/). Two binaries, because the spl
 | **CPF** | ✅ | Mod 11, two check digits; repeated-sequence rejection |
 | **CIN** | ✅ | Uses the CPF as the national number — same validation |
 | **CNPJ** numeric | ✅ | Mod 11, weights `5,4,3,2,9,8,7,6,5,4,3,2` |
-| **CNPJ** alphanumeric | ✅ | Mod 11 with `ASCII − 48` for letters — **in force since 2026-07-06** |
+| **CNPJ** alphanumeric | ✅ | Mod 11 with `ASCII − 48` for letters — **first issued on 2026-07-31** ([Receita Federal](https://www.gov.br/receitafederal/pt-br/assuntos/noticias/2026/julho/receita-federal-gera-o-primeiro-cnpj-em-formato-alfanumerico)) |
 | **CNH** | ✅ | Mod 11, 11-digit variant |
 | **PIS / NIS / NIT** | ✅ | Mod 11, weights `3,2,9,8,7,6,5,4,3,2` |
 | **Título de eleitor** | ✅ | Two check digits, mod 11, embedded state code |
@@ -88,7 +88,7 @@ ISPB registry from [`guibranco/BancosBrasileiros`](https://github.com/guibranco/
 
 ## Why it exists
 
-Secret scanning is solved and crowded — betterleaks ships 463 rules, kingfisher 1,051. Rebuilding that corpus loses. So vedei **imports betterleaks** (MIT) and spends everything on what nobody built: **Brazilian sensitive data**. No maintained open-source tool detects CPF, CNPJ, CNH, Pix keys, card PANs and E2EIDs. Not underserved — empty.
+Secret scanning is solved and crowded — betterleaks ships 463 rules, kingfisher 1,051. Rebuilding that corpus loses. So vedei **imports betterleaks** (MIT) and spends its effort where global tools are weakest: **Brazilian sensitive data**, validated by check digit rather than matched by shape — CPF, CNPJ including the alphanumeric format, CNH, Pix keys and E2EIDs, card PANs with Brazilian brands. And it enforces at the boundary where data leaves: the agent's context, the CI run, the log line. One Go binary, no runtime, no network.
 
 The second reason is architectural. betterleaks validates a secret by asking the provider over HTTP, which needs a rate limiter, a timeout budget, and care about where those requests go. Brazilian personal data doesn't work that way: a CPF is a mod-11 check digit, a card is Luhn, a Pix key is its type. **All offline.** No network, no rate limits, no SSRF surface. Simpler and safer, not just different.
 
@@ -163,9 +163,9 @@ corpus/           # labeled precision/recall harness (make corpus)
 
 ## The name
 
-**Надзор** (*vedei*) is Russian for *oversight* — the word used for regulatory supervision. It is `dozor` (the watch) with the prefix `nad-` (over, above).
+**Vedei** is Portuguese: the first person past tense of *vedar* — to seal, to block, to keep from passing. *Eu vedei*: "I sealed it."
 
-A tool that inspects what passes a boundary and enforces a rule about it is not a guard. It is oversight.
+It is what the person running the tool says once it has done its job. The CPF did not reach the model, the key did not reach the log, the card number did not reach the commit. Sealed.
 
 ## Contributing · Security · License
 
