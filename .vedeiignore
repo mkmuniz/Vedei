@@ -90,6 +90,12 @@ ec2a7642f9821664294f09e54573ca66  # generated CNS vector
 
 3d916d891e1aab79bc68592c2d7cd3a5  # 00.000.000/E08G-12, the first alphanumeric CNPJ the Receita issued (2026-07-31), a public record used as a corpus case
 
+# --- multilingual credential fixtures (corpus/cases/secrets-i18n.txt) ---
+# One made-up credential-shaped value under key names in three languages. The
+# same value is reported by two rules, so it has two fingerprints.
+bd02d2bf6ebb75a6c085a966323c06f1  # fake credential under password/senha/contrasena keys
+c3fca3e7a0151668ec85c974b0f4f57f  # fake credential under api_key/chave/clave keys
+
 # Nothing is ignored by path, on purpose. Silencing *_test.go wholesale would
 # also silence a credential genuinely committed into a test, which is a place
 # credentials genuinely end up. Every entry above is one value, named.
