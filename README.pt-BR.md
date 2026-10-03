@@ -162,9 +162,9 @@ corpus/           # harness rotulado de precision/recall (make corpus)
 
 ## O nome
 
-**Надзор** (*vedei*) é "supervisão" ou "fiscalização" em russo — a palavra usada para supervisão regulatória. É `dozor` (a ronda) com o prefixo `nad-` (sobre, acima).
+**Vedei** é o verbo *vedar* na primeira pessoa do pretérito perfeito — vedar como quem impede a passagem, como quem tampa uma fresta.
 
-Uma ferramenta que inspeciona o que passa por uma fronteira e aplica uma regra sobre isso não é um guarda. É fiscalização.
+É o que diz quem usa a ferramenta depois que ela fez o trabalho dela. O CPF não chegou ao modelo, a chave não chegou ao log, o número do cartão não chegou ao commit. Vedei.
 
 ## Contribuir · Segurança · Licença
 

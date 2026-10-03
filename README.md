@@ -163,9 +163,9 @@ corpus/           # labeled precision/recall harness (make corpus)
 
 ## The name
 
-**Надзор** (*vedei*) is Russian for *oversight* — the word used for regulatory supervision. It is `dozor` (the watch) with the prefix `nad-` (over, above).
+**Vedei** is Portuguese: the first person past tense of *vedar* — to seal, to block, to keep from passing. *Eu vedei*: "I sealed it."
 
-A tool that inspects what passes a boundary and enforces a rule about it is not a guard. It is oversight.
+It is what the person running the tool says once it has done its job. The CPF did not reach the model, the key did not reach the log, the card number did not reach the commit. Sealed.
 
 ## Contributing · Security · License
 
