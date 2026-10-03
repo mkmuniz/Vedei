@@ -38,7 +38,11 @@ and no security tool watching them. A .env has file permissions and a
 gitignore; a transcript has neither, while aggregating secrets from every
 source the agent ever touched. Whoever reads the disk reads all of it.
 
-This command reports. It does not modify anything.`,
+This command reports. It does not modify anything.
+
+Gemini CLI and Cursor keep transcripts too and are not read yet: Gemini's JSON
+format is untested against real sessions, and Cursor's is a SQLite database.
+See the README for where each keeps them.`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			roots := map[transcript.Agent]string{}

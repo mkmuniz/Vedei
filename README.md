@@ -100,6 +100,15 @@ vedei reduces what lands there and shows what already did. It does not replace d
 
 Documented upstream: [#44868](https://github.com/anthropics/claude-code/issues/44868), [#50014](https://github.com/anthropics/claude-code/issues/50014), [#95680](https://github.com/anthropics/claude-code/issues/95680).
 
+**Which agents' transcripts are read.** `vedei transcript scan` and `scrub` cover Claude Code (`~/.claude/projects/`) and Codex (`~/.codex/sessions/`). Two other agents keep the same kind of record and are **not** read yet:
+
+| agent | where it keeps sessions | why not yet |
+|---|---|---|
+| Gemini CLI | `~/.gemini/tmp/<project hash>/chats/`, JSON files | the format is documented but untested against real sessions; reading it blind would report coverage it does not have |
+| Cursor | `state.vscdb`, a SQLite database under the Cursor user directory | reading it needs a SQLite driver, and `scrub` cannot safely rewrite a database |
+
+Both are plaintext on disk too. Until they are supported, treat their directories as holding whatever their agents read.
+
 ## What "validate" means here
 
 | | Secret | Personal data |
