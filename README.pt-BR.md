@@ -48,7 +48,7 @@ No CI:
 
 ## Silenciando o que é deliberado
 
-O `.vedeiignore` aceita o fingerprint do achado, derivado do tipo e do valor normalizado e **nunca da localização** — então a entrada sobrevive ao arquivo ser movido ou renomeado. O arquivo deste repositório é o [`.vedeiignore`](.vedeiignore): 71 achados, 21 fingerprints, cada um com o motivo escrito ao lado. Nada é silenciado por caminho, de propósito. Silenciar `*_test.go` inteiro também silenciaria uma credencial de verdade commitada num teste, que é um lugar onde credencial de verdade acaba indo.
+O `.vedeiignore` aceita o fingerprint do achado, derivado do tipo e do valor normalizado e **nunca da localização** — então a entrada sobrevive ao arquivo ser movido ou renomeado. O arquivo deste repositório é o [`.vedeiignore`](.vedeiignore): um fingerprint por valor de teste deliberado, cada um com o motivo escrito ao lado. Caminhos quase nunca são silenciados: ignorar `*_test.go` inteiro também silenciaria uma credencial de verdade commitada num teste, que é um lugar onde credencial de verdade acaba indo. A única exceção é `corpus/cases/`, o corpus rotulado — toda linha ali é um exemplo rotulado por construção, e um fingerprint por caso não escala.
 
 Depois ligue o hook no seu agente: [`hooks/`](hooks/). São dois binários, e é essa separação que deixa o hook rápido — o `vedei` carrega 417 regras de segredo, o `vedei-hook` tem 5 MB e só conversa com o daemon.
 

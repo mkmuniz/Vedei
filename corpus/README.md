@@ -48,3 +48,9 @@ reason, then fix the detector until this test passes again. When a detector
 gains a document type, add `expect` cases for it. The file
 `cases/false-positives.txt` is the running record of what scanning the real
 world actually produced — every entry in it was once a wrong finding.
+
+No `.vedeiignore` entry is needed. `corpus/cases/` is silenced by path — the one
+path rule in this repository — so the self-scan does not report the values that
+live here. That rule also means a value pasted into these files is never
+reported by `vedei scan`, which is safe only because every line must be a
+labeled `expect` or `reject`: the corpus test fails on anything else.

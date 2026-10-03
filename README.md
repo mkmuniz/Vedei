@@ -51,7 +51,7 @@ Wire the hook into your agent: [`hooks/`](hooks/). Two binaries, because the spl
 
 ## Silencing what is deliberate
 
-`.vedeiignore` takes a finding fingerprint, derived from the type and the normalized value and **never from the location** — so an entry survives the file being moved or renamed. This repository's own file is [`.vedeiignore`](.vedeiignore): 71 findings, 21 fingerprints, each with the reason written next to it. Nothing is silenced by path, on purpose. Silencing `*_test.go` wholesale would also silence a credential genuinely committed into a test, which is a place credentials genuinely end up.
+`.vedeiignore` takes a finding fingerprint, derived from the type and the normalized value and **never from the location** — so an entry survives the file being moved or renamed. This repository's own file is [`.vedeiignore`](.vedeiignore): one fingerprint per deliberate test value, each with the reason written next to it. Paths are almost never silenced: ignoring `*_test.go` wholesale would also silence a credential genuinely committed into a test, which is a place credentials genuinely end up. The single exception is `corpus/cases/`, the labeled corpus — every line there is a labeled example by construction, and a fingerprint per case would not scale.
 
 ## What it detects
 
