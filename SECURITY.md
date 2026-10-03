@@ -50,12 +50,15 @@ peak use is roughly twice the input. A 1 GB file needs about 2 GB. Streaming
 arrives with the CLI in M4; until then, do not point the library at
 arbitrarily large input.
 
-**The upstream corpus brings its own false positives.** betterleaks filters
-candidates with a token-efficiency ratio calibrated on a 33,775-word English
-dictionary. Portuguese text sits far closer to the threshold than English
-does — `senhapadrao` scores 2.20 and is reported, `defaultpassword` scores
-7.50 and is correctly discarded — so a Portuguese codebase sees more noise
-from the secrets engine. M5 measures and corrects this.
+**The upstream secret rules were built around English key names.** Measured
+on betterleaks v1.8.1, a real credential was found 100% of the time under an
+English name but 57% under a Spanish one and 29% under a Portuguese one:
+`senha` and `segredo` were never recognized. vedei translates key names and
+scans again, reaching 100% in all three; the corpus in `corpus/` pins it.
+The upstream rules also report instructional placeholders such as
+`"your-password-here"` at low confidence — in every language equally, so it is
+noise, not a language bias. An earlier note here claimed Portuguese placeholders
+were the problem; measured end to end, they are not.
 
 **124 transitive dependencies.** Two direct ones, of which betterleaks
 brings the rest, including cloud SDKs it uses for credential validation that

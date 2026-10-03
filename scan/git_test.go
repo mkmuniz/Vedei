@@ -265,6 +265,69 @@ func TestHistory_VedeiignoreComesFromTheWorkingTree(t *testing.T) {
 	}
 }
 
+// Path rules in .vedeiignore must hold in history and diff scans too. They used
+// to apply only to "vedei scan", so a directory silenced there was still
+// reported by "vedei diff" — which is what CI runs on every pull request.
+func TestGitScanner_HonoursVedeiignorePathRules(t *testing.T) {
+	repo := gitRepo(t)
+	writeFile(t, repo, ".vedeiignore", "fixtures/\n")
+	writeFile(t, repo, "fixtures/cases.txt", "cpf "+testCPF)
+	writeFile(t, repo, "app/config.txt", "cpf "+testCPF)
+	git(t, repo, "add", ".")
+	git(t, repo, "commit", "-qm", "first")
+	base := git(t, repo, "rev-parse", "HEAD~0")
+
+	writeFile(t, repo, "fixtures/more.txt", "cnpj 11.222.333/0001-81")
+	git(t, repo, "add", ".")
+	git(t, repo, "commit", "-qm", "second")
+
+	g := gitScanner(t, repo)
+	hist, err := g.History(context.Background())
+	if err != nil {
+		t.Fatalf("History: %v", err)
+	}
+	diff, err := g.Diff(context.Background(), base, "HEAD")
+	if err != nil {
+		t.Fatalf("Diff: %v", err)
+	}
+
+	for name, res := range map[string]scan.Result{"history": hist, "diff": diff} {
+		for _, f := range res.Files {
+			if strings.Contains(f.Path, "fixtures/") {
+				t.Errorf("%s reported %s, which .vedeiignore silences by path", name, f.Path)
+			}
+		}
+	}
+	// The rule must not silence everything: the file outside it is still found.
+	if hist.Total() != 1 {
+		t.Errorf("history Total() = %d, want 1 (app/config.txt only)", hist.Total())
+	}
+}
+
+// History scans identical content once. An ignored path must not use up that
+// one scan: here the ignored copy sorts first, and the same bytes committed
+// outside the ignored directory still have to be reported.
+func TestHistory_IgnoredPathDoesNotHideTheSameBlobElsewhere(t *testing.T) {
+	repo := gitRepo(t)
+	writeFile(t, repo, ".vedeiignore", "a-fixtures/\n")
+	// Identical content, so one blob. "a-fixtures" sorts before "z-app".
+	writeFile(t, repo, "a-fixtures/case.txt", "cpf "+testCPF)
+	writeFile(t, repo, "z-app/config.txt", "cpf "+testCPF)
+	git(t, repo, "add", ".")
+	git(t, repo, "commit", "-qm", "first")
+
+	res, err := gitScanner(t, repo).History(context.Background())
+	if err != nil {
+		t.Fatalf("History: %v", err)
+	}
+	if res.Total() != 1 {
+		t.Fatalf("Total() = %d, want 1 — the copy outside the ignored directory was hidden", res.Total())
+	}
+	if got := res.Files[0].Path; !strings.Contains(got, "z-app/config.txt") {
+		t.Errorf("reported %q, want the z-app copy", got)
+	}
+}
+
 func TestNewGitScanner_NotARepository(t *testing.T) {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not available")

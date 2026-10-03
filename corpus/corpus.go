@@ -1,11 +1,12 @@
 // Package corpus loads the labeled examples that measure detection quality.
 //
 // It is the measurement tool the milestones call for: a scanner's worth is not
-// "does it compile" but "what does it catch and what does it cry wolf over",
-// and in Portuguese the second question is the hard one. The upstream secret
-// rules score candidates against an English dictionary, so a Portuguese word
-// like "senhapadrao" reads as random and is reported. That cost is only visible
-// against labeled data, which is what this package is.
+// "does it compile" but "what does it catch and what does it cry wolf over".
+// Neither question can be answered by reasoning about the rules. M5 set out
+// expecting Portuguese placeholders to be reported as secrets; measured against
+// labeled cases, they were not — the real gap was the reverse, credentials
+// under Portuguese key names going unfound. Only labeled data shows which
+// way a bias runs, which is what this package is.
 //
 // A case file is plain text, one directive per line:
 //
@@ -194,4 +195,95 @@ func (m Metrics) String() string {
 	return fmt.Sprintf("precision %.3f (%d reported, %d wrong), recall %.3f (%d/%d found)",
 		m.Precision(), m.TruePositives+m.FalsePositives, m.FalsePositives,
 		m.Recall(), m.TruePositives, m.TruePositives+m.FalseNegatives)
+}
+
+// Report accumulates metrics for a run, overall and per finding type.
+//
+// The per-type split is what the overall number hides. A corpus can sit at 0.99
+// precision while one type sits at 0.80, because the noisy type is outnumbered by
+// clean ones; the overall figure averages the problem away. Reporting per type
+// is what makes "precision of at least 0.99 for every type with a check digit" a
+// claim that can be checked rather than one that is implied.
+type Report struct {
+	Overall Metrics
+	byType  map[string]*Metrics
+}
+
+// NewReport returns an empty report.
+func NewReport() *Report {
+	return &Report{byType: map[string]*Metrics{}}
+}
+
+// Record scores one case against the set of types the engine reported for it,
+// and reports whether the case passed.
+//
+// A false positive is charged to every type that was reported on a Reject case,
+// because that is the type whose precision it damages. A Reject the engine left
+// alone is a true negative for the run but belongs to no type, so it counts only
+// overall.
+func (r *Report) Record(c Case, found map[string]bool) bool {
+	switch c.Kind {
+	case Expect:
+		m := r.metricsFor(c.Type)
+		if found[c.Type] {
+			r.Overall.TruePositives++
+			m.TruePositives++
+			return true
+		}
+		r.Overall.FalseNegatives++
+		m.FalseNegatives++
+		return false
+	case Reject:
+		if len(found) == 0 {
+			r.Overall.TrueNegatives++
+			return true
+		}
+		r.Overall.FalsePositives++
+		for t := range found {
+			r.metricsFor(t).FalsePositives++
+		}
+		return false
+	default:
+		return false
+	}
+}
+
+// Type returns the metrics recorded for one finding type.
+func (r *Report) Type(t string) Metrics {
+	if m, ok := r.byType[t]; ok {
+		return *m
+	}
+	return Metrics{}
+}
+
+// Types returns every type the report has seen, sorted, so two runs print in
+// the same order.
+func (r *Report) Types() []string {
+	out := make([]string, 0, len(r.byType))
+	for t := range r.byType {
+		out = append(out, t)
+	}
+	sort.Strings(out)
+	return out
+}
+
+// Table renders one line per type, for a test log.
+func (r *Report) Table() string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "%-20s %9s %7s %6s %6s %6s\n", "TYPE", "PRECISION", "RECALL", "TP", "FP", "FN")
+	for _, t := range r.Types() {
+		m := r.byType[t]
+		fmt.Fprintf(&b, "%-20s %9.3f %7.3f %6d %6d %6d\n",
+			t, m.Precision(), m.Recall(), m.TruePositives, m.FalsePositives, m.FalseNegatives)
+	}
+	return b.String()
+}
+
+func (r *Report) metricsFor(t string) *Metrics {
+	m, ok := r.byType[t]
+	if !ok {
+		m = &Metrics{}
+		r.byType[t] = m
+	}
+	return m
 }

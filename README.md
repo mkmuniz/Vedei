@@ -51,7 +51,7 @@ Wire the hook into your agent: [`hooks/`](hooks/). Two binaries, because the spl
 
 ## Silencing what is deliberate
 
-`.vedeiignore` takes a finding fingerprint, derived from the type and the normalized value and **never from the location** — so an entry survives the file being moved or renamed. This repository's own file is [`.vedeiignore`](.vedeiignore): 71 findings, 21 fingerprints, each with the reason written next to it. Nothing is silenced by path, on purpose. Silencing `*_test.go` wholesale would also silence a credential genuinely committed into a test, which is a place credentials genuinely end up.
+`.vedeiignore` takes a finding fingerprint, derived from the type and the normalized value and **never from the location** — so an entry survives the file being moved or renamed. This repository's own file is [`.vedeiignore`](.vedeiignore): one fingerprint per deliberate test value, each with the reason written next to it. Paths are almost never silenced: ignoring `*_test.go` wholesale would also silence a credential genuinely committed into a test, which is a place credentials genuinely end up. The single exception is `corpus/cases/`, the labeled corpus — every line there is a labeled example by construction, and a fingerprint per case would not scale.
 
 ## What it detects
 
@@ -142,7 +142,7 @@ Full records in [`docs/adr/`](docs/adr/).
 
 Features, implementation steps, test strategy and exit criteria per stage: [`MILESTONES.md`](MILESTONES.md). Component design and performance budgets: [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
-**On M5.** betterleaks filters candidates with a BPE token-efficiency ratio against a 33,775-word **English** dictionary and a fixed 2.5 threshold. Measured with its own embedded tokenizer: `defaultpassword` scores 7.50 and is correctly discarded; `senhapadrao` scores 2.20 and is reported as a secret. Real secrets sit at 1.0–1.6. In English the gap is comfortable; in Portuguese it nearly vanishes. M5 turns that into a versioned corpus and a CI-enforced metric.
+**On M5.** The original hypothesis was a precision bias: betterleaks discards a candidate as prose when it contains a word from a 33,775-word **English** dictionary, so `defaultpassword` is dropped and `senhapadrao` falls through to a ratio threshold. Measured end to end on v1.8.1, the full filter chain rejects prose placeholders equally in English, Portuguese and Spanish. The real bias was in **recall**: the rules key on English names, so a real credential was found 100% of the time under an English key, 57% under a Spanish one and **29% under a Portuguese one** — `senha` and `segredo` were never recognized. vedei now translates key names before a second pass, reaching 100% in all three. The labeled corpus behind these numbers is in [`corpus/`](corpus/): 119 cases, precision and recall 1.000 per type, enforced in CI.
 
 ## Project structure
 

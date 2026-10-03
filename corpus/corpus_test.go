@@ -32,32 +32,28 @@ func TestCorpus(t *testing.T) {
 	}
 
 	eng := engine.All()
-	var m corpus.Metrics
+	report := corpus.NewReport()
 
 	for _, c := range cases {
 		types := typesFound(t, eng, c.Text)
-
+		if report.Record(c, types) {
+			continue
+		}
 		switch c.Kind {
 		case corpus.Expect:
-			if types[c.Type] {
-				m.TruePositives++
-			} else {
-				m.FalseNegatives++
-				t.Errorf("%s:%d: expected %s in %q, found %v",
-					c.Source, c.Line, c.Type, c.Text, keys(types))
-			}
+			t.Errorf("%s:%d: expected %s in %q, found %v",
+				c.Source, c.Line, c.Type, c.Text, keys(types))
 		case corpus.Reject:
-			if len(types) == 0 {
-				m.TrueNegatives++
-			} else {
-				m.FalsePositives++
-				t.Errorf("%s:%d: %q should be quiet (%s), but was reported as %v",
-					c.Source, c.Line, c.Text, c.Reason, keys(types))
-			}
+			t.Errorf("%s:%d: %q should be quiet (%s), but was reported as %v",
+				c.Source, c.Line, c.Text, c.Reason, keys(types))
 		}
 	}
 
-	t.Logf("%d cases: %s", len(cases), m)
+	// The strict gate above is the explicit target: precision and recall of
+	// 1.000 for every type, which is stricter than the 0.99 floor the project
+	// sets for types with a check digit. The table shows where each type stands,
+	// so a type drifting toward that floor is visible before it crosses it.
+	t.Logf("%d cases: %s\n%s", len(cases), report.Overall, report.Table())
 }
 
 // typesFound returns the set of finding types the engine reports for text.
@@ -101,6 +97,80 @@ func TestCorpus_MetricsMath(t *testing.T) {
 	empty := corpus.Metrics{}
 	if empty.Precision() != 1 || empty.Recall() != 1 {
 		t.Errorf("empty metrics = %v", empty)
+	}
+}
+
+// A false positive is charged to the type that was wrongly reported, and a miss
+// to the type that was expected. That attribution is what makes the per-type
+// table mean something; get it wrong and a noisy type hides behind a clean one.
+func TestReport_Record(t *testing.T) {
+	tests := []struct {
+		name     string
+		c        corpus.Case
+		found    map[string]bool
+		wantPass bool
+		check    func(t *testing.T, r *corpus.Report)
+	}{
+		{
+			name:     "expect found",
+			c:        corpus.Case{Kind: corpus.Expect, Type: "cpf"},
+			found:    map[string]bool{"cpf": true},
+			wantPass: true,
+			check: func(t *testing.T, r *corpus.Report) {
+				if got := r.Type("cpf").TruePositives; got != 1 {
+					t.Errorf("cpf TruePositives = %d, want 1", got)
+				}
+			},
+		},
+		{
+			name:     "expect found under the wrong type is a miss",
+			c:        corpus.Case{Kind: corpus.Expect, Type: "cpf"},
+			found:    map[string]bool{"cnh": true},
+			wantPass: false,
+			check: func(t *testing.T, r *corpus.Report) {
+				if got := r.Type("cpf").FalseNegatives; got != 1 {
+					t.Errorf("cpf FalseNegatives = %d, want 1", got)
+				}
+			},
+		},
+		{
+			name:     "reject reported is charged to the reported type",
+			c:        corpus.Case{Kind: corpus.Reject},
+			found:    map[string]bool{"card-pan": true},
+			wantPass: false,
+			check: func(t *testing.T, r *corpus.Report) {
+				if got := r.Type("card-pan").FalsePositives; got != 1 {
+					t.Errorf("card-pan FalsePositives = %d, want 1", got)
+				}
+				if got := r.Overall.FalsePositives; got != 1 {
+					t.Errorf("overall FalsePositives = %d, want 1", got)
+				}
+			},
+		},
+		{
+			name:     "reject left alone belongs to no type",
+			c:        corpus.Case{Kind: corpus.Reject},
+			found:    map[string]bool{},
+			wantPass: true,
+			check: func(t *testing.T, r *corpus.Report) {
+				if len(r.Types()) != 0 {
+					t.Errorf("types = %v, want none", r.Types())
+				}
+				if r.Overall.TrueNegatives != 1 {
+					t.Errorf("overall TrueNegatives = %d, want 1", r.Overall.TrueNegatives)
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := corpus.NewReport()
+			if got := r.Record(tt.c, tt.found); got != tt.wantPass {
+				t.Errorf("Record() = %v, want %v", got, tt.wantPass)
+			}
+			tt.check(t, r)
+		})
 	}
 }
 

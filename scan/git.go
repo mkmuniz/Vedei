@@ -170,31 +170,43 @@ func (g *GitScanner) History(ctx context.Context, revs ...string) (Result, error
 		if err := ctx.Err(); err != nil {
 			return res, err
 		}
-		entries, err := g.run(ctx, "ls-tree", "-r", "-z", "--long", commit)
+		g.scanCommit(ctx, &res, commit, ignores, seen)
+	}
+	return res, nil
+}
+
+// scanCommit scans the blobs in one commit that have not been scanned yet.
+func (g *GitScanner) scanCommit(ctx context.Context, res *Result, commit string, ignores Stack, seen map[string]bool) {
+	entries, err := g.run(ctx, "ls-tree", "-r", "-z", "--long", commit)
+	if err != nil {
+		res.Errs = append(res.Errs, err)
+		return
+	}
+	for _, e := range splitNUL(entries) {
+		blob, path, size, ok := parseLsTree(e)
+		if !ok || seen[blob] {
+			continue
+		}
+		// An ignored path must not consume the blob. Identical content is
+		// scanned once, so if the ignored copy marked it as seen, the same
+		// bytes committed somewhere that is not ignored would never be
+		// scanned — a leak hidden by whichever path sorted first.
+		if ignores.Ignored(path, false) {
+			continue
+		}
+		seen[blob] = true
+		if g.scanner.maxFileSize > 0 && size > g.scanner.maxFileSize {
+			res.Skipped++
+			continue
+		}
+
+		content, err := g.run(ctx, "cat-file", "blob", blob)
 		if err != nil {
 			res.Errs = append(res.Errs, err)
 			continue
 		}
-		for _, e := range splitNUL(entries) {
-			blob, path, size, ok := parseLsTree(e)
-			if !ok || seen[blob] {
-				continue
-			}
-			seen[blob] = true
-			if g.scanner.maxFileSize > 0 && size > g.scanner.maxFileSize {
-				res.Skipped++
-				continue
-			}
-
-			content, err := g.run(ctx, "cat-file", "blob", blob)
-			if err != nil {
-				res.Errs = append(res.Errs, err)
-				continue
-			}
-			g.appendFindings(ctx, &res, GitRef{Commit: commit, Path: path}, content, ignores)
-		}
+		g.appendFindings(ctx, res, GitRef{Commit: commit, Path: path}, content, ignores)
 	}
-	return res, nil
 }
 
 // scanIndexPaths scans the staged version of each path, reading from the index
@@ -219,6 +231,14 @@ func (g *GitScanner) scanIndexPaths(ctx context.Context, paths []string) (Result
 
 // appendFindings scans one blob and records what it held.
 func (g *GitScanner) appendFindings(ctx context.Context, res *Result, ref GitRef, content []byte, ignores Stack) {
+	// Path rules in .vedeiignore apply to history and diffs as they do to a tree
+	// scan. Without this, a path rule silenced a file in "vedei scan" and the
+	// same file was still reported by "vedei diff" — the mode CI runs on every
+	// pull request.
+	if ignores.Ignored(ref.Path, false) {
+		res.Skipped++
+		return
+	}
 	if g.scanner.maxFileSize > 0 && int64(len(content)) > g.scanner.maxFileSize {
 		res.Skipped++
 		return

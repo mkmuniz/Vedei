@@ -48,7 +48,7 @@ No CI:
 
 ## Silenciando o que é deliberado
 
-O `.vedeiignore` aceita o fingerprint do achado, derivado do tipo e do valor normalizado e **nunca da localização** — então a entrada sobrevive ao arquivo ser movido ou renomeado. O arquivo deste repositório é o [`.vedeiignore`](.vedeiignore): 71 achados, 21 fingerprints, cada um com o motivo escrito ao lado. Nada é silenciado por caminho, de propósito. Silenciar `*_test.go` inteiro também silenciaria uma credencial de verdade commitada num teste, que é um lugar onde credencial de verdade acaba indo.
+O `.vedeiignore` aceita o fingerprint do achado, derivado do tipo e do valor normalizado e **nunca da localização** — então a entrada sobrevive ao arquivo ser movido ou renomeado. O arquivo deste repositório é o [`.vedeiignore`](.vedeiignore): um fingerprint por valor de teste deliberado, cada um com o motivo escrito ao lado. Caminhos quase nunca são silenciados: ignorar `*_test.go` inteiro também silenciaria uma credencial de verdade commitada num teste, que é um lugar onde credencial de verdade acaba indo. A única exceção é `corpus/cases/`, o corpus rotulado — toda linha ali é um exemplo rotulado por construção, e um fingerprint por caso não escala.
 
 Depois ligue o hook no seu agente: [`hooks/`](hooks/). São dois binários, e é essa separação que deixa o hook rápido — o `vedei` carrega 417 regras de segredo, o `vedei-hook` tem 5 MB e só conversa com o daemon.
 
@@ -141,7 +141,7 @@ Registros completos em [`docs/adr/`](docs/adr/).
 
 Features, passo a passo, estratégia de teste e critério de saída por etapa: [`MILESTONES.md`](MILESTONES.md). Desenho de componentes e orçamentos: [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
-**Sobre o M5.** O betterleaks filtra candidatos por razão de token BPE contra um dicionário de 33.775 palavras **em inglês** e limiar fixo de 2,5. Medido com o tokenizador que ele mesmo embute: `defaultpassword` dá 7,50 e é corretamente descartado; `senhapadrao` dá 2,20 e é reportado como segredo. Segredos reais ficam em 1,0–1,6. Em inglês a separação é confortável; em português quase some. O M5 transforma isso em corpus versionado e métrica cobrada no CI.
+**Sobre o M5.** A hipótese original era um viés de precision: o betterleaks descarta um candidato como prosa quando ele contém uma palavra de um dicionário de 33.775 palavras **em inglês**, então `defaultpassword` cai e `senhapadrao` segue para um limiar de razão. Medido de ponta a ponta na v1.8.1, a cadeia completa de filtros rejeita placeholders em prosa igualmente em inglês, português e espanhol. O viés real estava no **recall**: as regras reconhecem nomes de chave em inglês, então uma credencial real era achada 100% das vezes sob uma chave em inglês, 57% em espanhol e **29% em português** — `senha` e `segredo` nunca eram reconhecidos. O vedei agora traduz nomes de chave antes de uma segunda passada e chega a 100% nos três. O corpus rotulado por trás desses números está em [`corpus/`](corpus/): 119 casos, precision e recall 1.000 por tipo, cobrados no CI.
 
 ## Estrutura do projeto
 
