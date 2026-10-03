@@ -110,6 +110,16 @@ func (e *Engine) Scan(ctx context.Context, content []byte, meta detect.Metadata)
 	text := string(content)
 	raw := e.detector.DetectString(text)
 
+	// A second pass over the same text with Portuguese and Spanish key names
+	// translated, so a credential in "senha" or "segredo" meets the same rules
+	// and filters as one in "password" or "secret". Values are never rewritten,
+	// so locationsOf below finds every secret from this pass in the original
+	// text, and a value both passes report collapses into one finding by
+	// fingerprint. See localize.go for the measurement behind it.
+	if localized, ok := localizeKeys(text); ok {
+		raw = append(raw, e.detector.DetectString(localized)...)
+	}
+
 	// One credential found in several places is one finding with several
 	// locations, matching how the Brazilian engine reports.
 	byPrint := make(map[string]*detect.Finding, len(raw))
