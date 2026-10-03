@@ -87,7 +87,7 @@ Base de ISPB do [`guibranco/BancosBrasileiros`](https://github.com/guibranco/Ban
 
 ## Por que existe
 
-Detecção de segredo é problema resolvido e concorrido — betterleaks tem 463 regras, kingfisher 1.051. Reconstruir esse corpus é perder. Então o vedei **importa o betterleaks** (MIT) e gasta tudo no que ninguém construiu: **dado sensível brasileiro**. Nenhuma ferramenta open source mantida detecta CPF, CNPJ, CNH, chave Pix, PAN e E2EID. Não é mal servido — é vazio.
+Detecção de segredo é problema resolvido e concorrido — betterleaks tem 463 regras, kingfisher 1.051. Reconstruir esse corpus é perder. Então o vedei **importa o betterleaks** (MIT) e concentra o esforço onde as ferramentas globais são mais fracas: **dado sensível brasileiro**, validado por dígito verificador em vez de casado por formato — CPF, CNPJ inclusive o alfanumérico, CNH, chave Pix e E2EID, PAN de cartão com bandeiras brasileiras. E aplica o controle na fronteira por onde o dado sai: o contexto do agente, a execução de CI, a linha de log. Um binário Go, sem runtime, sem rede.
 
 A segunda razão é arquitetural. O betterleaks valida segredo perguntando ao provedor por HTTP, o que exige rate limiter, orçamento de timeout e cuidado com o destino das requisições. Dado pessoal brasileiro não funciona assim: CPF é módulo 11, cartão é Luhn, chave Pix é o tipo dela. **Tudo offline.** Sem rede, sem limite de vazão, sem superfície de SSRF. Mais simples e mais seguro, não só diferente.
 

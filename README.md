@@ -88,7 +88,7 @@ ISPB registry from [`guibranco/BancosBrasileiros`](https://github.com/guibranco/
 
 ## Why it exists
 
-Secret scanning is solved and crowded — betterleaks ships 463 rules, kingfisher 1,051. Rebuilding that corpus loses. So vedei **imports betterleaks** (MIT) and spends everything on what nobody built: **Brazilian sensitive data**. No maintained open-source tool detects CPF, CNPJ, CNH, Pix keys, card PANs and E2EIDs. Not underserved — empty.
+Secret scanning is solved and crowded — betterleaks ships 463 rules, kingfisher 1,051. Rebuilding that corpus loses. So vedei **imports betterleaks** (MIT) and spends its effort where global tools are weakest: **Brazilian sensitive data**, validated by check digit rather than matched by shape — CPF, CNPJ including the alphanumeric format, CNH, Pix keys and E2EIDs, card PANs with Brazilian brands. And it enforces at the boundary where data leaves: the agent's context, the CI run, the log line. One Go binary, no runtime, no network.
 
 The second reason is architectural. betterleaks validates a secret by asking the provider over HTTP, which needs a rate limiter, a timeout budget, and care about where those requests go. Brazilian personal data doesn't work that way: a CPF is a mod-11 check digit, a card is Luhn, a Pix key is its type. **All offline.** No network, no rate limits, no SSRF surface. Simpler and safer, not just different.
 
