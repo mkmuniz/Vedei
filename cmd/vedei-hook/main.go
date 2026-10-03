@@ -38,7 +38,7 @@ func main() {
 	// for as long as it lived.
 	fallbackTimeout := flag.Duration("fallback-timeout", 30*time.Second,
 		"give up on the fallback command after this long")
-	fallback := flag.String("fallback", "", `command to fall back to, or "" to look for vedei beside this binary; "-" to disable`)
+	fallback := flag.String("fallback", "", `vedei binary to fall back to, or "" to look for one beside this binary; "-" to disable`)
 	showVersion := flag.Bool("version", false, "print the version and exit")
 	flag.Parse()
 
@@ -115,32 +115,38 @@ func viaFallback(input []byte, override string, timeout time.Duration) []byte {
 	return out
 }
 
-// resolveFallback picks the command to fall back to: the --fallback flag, then
-// VEDEI_BIN, then a vedei sitting beside this binary, then one on PATH.
+// resolveFallback picks the vedei binary to fall back to: the --fallback flag,
+// then VEDEI_BIN, then a vedei sitting beside this binary, then one on PATH.
+// Every source is run the same way, as "vedei hook --no-daemon".
+//
+// --fallback used to be run with no arguments at all, which made vedei print
+// its help — and the help text was written back to the agent in place of the
+// tool's output. A path given here is a vedei binary like any other source.
 //
 // The sibling is tried before PATH so an installation is self-contained: the
 // pair is built and shipped together, and a different vedei earlier on PATH
 // should not quietly take over.
 func resolveFallback(override string) (bin string, args []string) {
+	hookArgs := []string{"hook", "--no-daemon"}
 	switch override {
 	case "-":
 		return "", nil
 	case "":
 	default:
-		return override, nil
+		return override, hookArgs
 	}
 
 	if env := os.Getenv("VEDEI_BIN"); env != "" {
-		return env, []string{"hook", "--no-daemon"}
+		return env, hookArgs
 	}
 	if self, err := os.Executable(); err == nil {
 		sibling := filepath.Join(filepath.Dir(self), "vedei")
 		if st, err := os.Stat(sibling); err == nil && !st.IsDir() {
-			return sibling, []string{"hook", "--no-daemon"}
+			return sibling, hookArgs
 		}
 	}
 	if found, err := exec.LookPath("vedei"); err == nil {
-		return found, []string{"hook", "--no-daemon"}
+		return found, hookArgs
 	}
 	return "", nil
 }
