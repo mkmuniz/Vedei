@@ -177,6 +177,32 @@ func TestHookClient_PassesThroughWithNothingAvailable(t *testing.T) {
 	}
 }
 
+// No daemon and no fallback is the case --fail-closed exists for: nothing can
+// scan the output, so it is withheld instead of passed on.
+func TestHookClient_FailClosedWithholdsWithNothingAvailable(t *testing.T) {
+	_, hook := bins(t)
+
+	out := runHook(t, hook, event("cpf "+testCPF),
+		"--socket", shortSocket(t), "--fallback", "-", "--fail-closed")
+	if strings.Contains(out, testCPF) {
+		t.Fatalf("the unscanned value got through: %s", out)
+	}
+	if !strings.Contains(out, "output withheld") {
+		t.Errorf("no withheld notice: %s", out)
+	}
+}
+
+// The flag is passed on to the full binary when the client falls back to it,
+// so a fallback that cannot scan withholds too. Here the fallback works, and
+// the value is redacted rather than withheld.
+func TestHookClient_FailClosedFallbackStillRedacts(t *testing.T) {
+	vedei, hook := bins(t)
+
+	out := runHook(t, hook, event("cpf "+testCPF),
+		"--socket", shortSocket(t), "--fallback", vedei, "--fail-closed")
+	assertRedactedEvent(t, out)
+}
+
 func TestHookClient_FailsOpenOnMalformedInput(t *testing.T) {
 	vedei, hook := bins(t)
 	socket := shortSocket(t)

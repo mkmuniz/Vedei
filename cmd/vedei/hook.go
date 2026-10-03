@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -40,19 +41,7 @@ unchanged. A hook that blocks is worse than a hook that misses something.`,
 			if err != nil {
 				return nil
 			}
-			out := hookevent.Rewrite(input, func(text string) (string, bool) {
-				res := redact(cmd.Context(), text, detect.Metadata{Source: "agent-hook"}, opts)
-				if res.Degraded || !res.Redacted {
-					return "", false
-				}
-				// Report on stderr, which the agent shows the user but does
-				// not send to the model, so a person can see what was held back.
-				for _, f := range res.Findings {
-					fmt.Fprintf(os.Stderr, "vedei: redacted %s\n", f.Type)
-				}
-				return res.Text, true
-			})
-			if _, err := os.Stdout.Write(out); err != nil {
+			if _, err := os.Stdout.Write(runHook(cmd.Context(), input, opts)); err != nil {
 				return err
 			}
 			return nil
@@ -61,4 +50,27 @@ unchanged. A hook that blocks is worse than a hook that misses something.`,
 
 	bindRedactFlags(cmd, &opts, true)
 	return cmd
+}
+
+// runHook rewrites one hook event. Reports go to stderr, which the agent shows
+// the user but does not send to the model, so a person can see what was held
+// back.
+func runHook(ctx context.Context, input []byte, opts redactOpts) []byte {
+	return hookevent.Rewrite(input, func(text string) (string, bool) {
+		res := redact(ctx, text, detect.Metadata{Source: "agent-hook"}, opts)
+		if res.Degraded {
+			if opts.failClosed {
+				fmt.Fprintf(os.Stderr, "vedei: output withheld, detection failed: %v\n", res.Err)
+				return hookevent.Withheld, true
+			}
+			return "", false
+		}
+		if !res.Redacted {
+			return "", false
+		}
+		for _, f := range res.Findings {
+			fmt.Fprintf(os.Stderr, "vedei: redacted %s\n", f.Type)
+		}
+		return res.Text, true
+	})
 }

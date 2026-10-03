@@ -14,10 +14,11 @@ import (
 
 // redactOpts are the flags every redaction command shares.
 type redactOpts struct {
-	socket   string
-	noDaemon bool
-	fast     bool
-	maxInput int
+	socket     string
+	noDaemon   bool
+	fast       bool
+	maxInput   int
+	failClosed bool
 }
 
 // bindRedactFlags registers the shared flags on cmd.
@@ -29,6 +30,8 @@ func bindRedactFlags(cmd *cobra.Command, o *redactOpts, withFast bool) {
 		"daemon socket to use when one is listening")
 	cmd.Flags().BoolVar(&o.noDaemon, "no-daemon", false,
 		"always scan in-process, even when a daemon is listening")
+	cmd.Flags().BoolVar(&o.failClosed, "fail-closed", false,
+		"when detection cannot run, withhold the text instead of passing it through unscanned")
 	if withFast {
 		cmd.Flags().BoolVar(&o.fast, "fast", false,
 			"skip the secret rule set, cutting startup at the cost of missing credentials (ignored when the daemon answers)")

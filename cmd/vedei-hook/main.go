@@ -39,6 +39,8 @@ func main() {
 	fallbackTimeout := flag.Duration("fallback-timeout", 30*time.Second,
 		"give up on the fallback command after this long")
 	fallback := flag.String("fallback", "", `vedei binary to fall back to, or "" to look for one beside this binary; "-" to disable`)
+	failClosed := flag.Bool("fail-closed", false,
+		"when detection cannot run, withhold the tool output instead of passing it through unscanned")
 	showVersion := flag.Bool("version", false, "print the version and exit")
 	flag.Parse()
 
@@ -52,9 +54,9 @@ func main() {
 		return // nothing to write back
 	}
 
-	out, ok := viaDaemon(context.Background(), input, *socket, *timeout)
+	out, ok := viaDaemon(context.Background(), input, *socket, *timeout, *failClosed)
 	if !ok {
-		out = viaFallback(input, *fallback, *fallbackTimeout)
+		out = viaFallback(input, *fallback, *fallbackTimeout, *failClosed)
 	}
 	_, _ = os.Stdout.Write(out)
 }
@@ -62,7 +64,7 @@ func main() {
 // viaDaemon rewrites the event through the daemon, reporting whether it was
 // able to. A false means the daemon could not be reached or could not answer;
 // it does not mean the event was clean.
-func viaDaemon(ctx context.Context, input []byte, socket string, timeout time.Duration) ([]byte, bool) {
+func viaDaemon(ctx context.Context, input []byte, socket string, timeout time.Duration, failClosed bool) ([]byte, bool) {
 	if socket == "" {
 		return nil, false
 	}
@@ -82,6 +84,10 @@ func viaDaemon(ctx context.Context, input []byte, socket string, timeout time.Du
 		// being unreachable. Re-running it elsewhere would fail the same way,
 		// so the event is served, unredacted.
 		served = true
+		if resp.Degraded && failClosed {
+			fmt.Fprintln(os.Stderr, "vedei: output withheld, the daemon could not scan it")
+			return hookevent.Withheld, true
+		}
 		if resp.Degraded || !resp.Redacted {
 			return "", false
 		}
@@ -95,11 +101,29 @@ func viaDaemon(ctx context.Context, input []byte, socket string, timeout time.Du
 
 // viaFallback hands the event to the full binary. On any failure — no binary,
 // a non-zero exit, empty output — the original event is returned.
-func viaFallback(input []byte, override string, timeout time.Duration) []byte {
+func viaFallback(input []byte, override string, timeout time.Duration, failClosed bool) []byte {
+	// Every way this function gives up returns the same thing: the input as it
+	// arrived, or — under --fail-closed — the input with its output withheld.
+	giveUp := func() []byte {
+		if failClosed {
+			return hookevent.Withhold(input)
+		}
+		return input
+	}
+
 	bin, args := resolveFallback(override)
 	if bin == "" {
-		fmt.Fprintln(os.Stderr, "vedei: no daemon and no vedei binary found; event passed through unredacted")
-		return input
+		if failClosed {
+			fmt.Fprintln(os.Stderr, "vedei: no daemon and no vedei binary found; output withheld")
+		} else {
+			fmt.Fprintln(os.Stderr, "vedei: no daemon and no vedei binary found; event passed through unredacted")
+		}
+		return giveUp()
+	}
+	// The full binary is told to fail closed too, so a fallback that cannot
+	// scan withholds rather than passing the output through.
+	if failClosed {
+		args = append(args, "--fail-closed")
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
@@ -110,7 +134,7 @@ func viaFallback(input []byte, override string, timeout time.Duration) []byte {
 	cmd.Stderr = os.Stderr
 	out, err := cmd.Output()
 	if err != nil || len(out) == 0 {
-		return input
+		return giveUp()
 	}
 	return out
 }

@@ -75,3 +75,19 @@ func Find(event map[string]json.RawMessage) (field, text string, ok bool) {
 	}
 	return "", "", false
 }
+
+// Withheld replaces a tool output when detection could not run and the caller
+// chose to fail closed. It says what happened and nothing about the content,
+// because the content is exactly what could not be checked.
+const Withheld = "[vedei: output withheld — detection could not run, and --fail-closed is set]"
+
+// Withhold returns the event with its tool output replaced by Withheld.
+//
+// It is the opposite of the default. Fail-open (ADR-005) passes unscanned text
+// through, because breaking a session is worse than missing one redaction —
+// true for most users, and the wrong trade where an unscanned CPF reaching a
+// model is a reportable incident. An event with no recognizable output is
+// returned unchanged: there is nothing in it this function knows how to hold.
+func Withhold(input []byte) []byte {
+	return Rewrite(input, func(string) (string, bool) { return Withheld, true })
+}
