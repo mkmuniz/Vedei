@@ -87,3 +87,27 @@ rule it out.
 
 `vedei daemon status` says whether the daemon is answering. When it is not,
 `vedei-hook` runs the full binary instead — correct, just slower.
+
+## Regulated environments: `--fail-closed`
+
+Fail-open is the right default for most people: a hook that breaks the session
+gets uninstalled. It is the wrong trade where an unscanned CPF reaching a model
+is a reportable incident. For those environments:
+
+```json
+{ "type": "command", "command": "vedei-hook --fail-closed", "timeout": 5 }
+```
+
+With the flag, when detection cannot run — the engine fails, the input is over
+the size cap, or there is no daemon and no vedei binary to fall back to — the
+tool output is replaced by a notice instead of being passed through:
+
+```
+[vedei: output withheld — detection could not run, and --fail-closed is set]
+```
+
+The agent loses that one result and can retry; the value never reaches the
+model unscanned. Everything else is unchanged: a scan that runs still redacts,
+and a clean result still passes. Two things stay fail-open even with the flag,
+because there is no tool output in them to withhold: malformed JSON, and an
+event shape vedei does not recognize.

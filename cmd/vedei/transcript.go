@@ -25,6 +25,7 @@ func newTranscriptScanCmd() *cobra.Command {
 	var (
 		path   string
 		asJSON bool
+		stats  bool
 	)
 
 	cmd := &cobra.Command{
@@ -37,7 +38,11 @@ and no security tool watching them. A .env has file permissions and a
 gitignore; a transcript has neither, while aggregating secrets from every
 source the agent ever touched. Whoever reads the disk reads all of it.
 
-This command reports. It does not modify anything.`,
+This command reports. It does not modify anything.
+
+Gemini CLI and Cursor keep transcripts too and are not read yet: Gemini's JSON
+format is untested against real sessions, and Cursor's is a SQLite database.
+See the README for where each keeps them.`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			roots := map[transcript.Agent]string{}
@@ -68,13 +73,22 @@ This command reports. It does not modify anything.`,
 				}
 			}
 
-			if asJSON {
+			switch {
+			case stats && asJSON:
+				enc := json.NewEncoder(os.Stdout)
+				enc.SetIndent("", "  ")
+				if err := enc.Encode(transcript.Summarize(all, scanned)); err != nil {
+					return err
+				}
+			case stats:
+				printStats(transcript.Summarize(all, scanned))
+			case asJSON:
 				enc := json.NewEncoder(os.Stdout)
 				enc.SetIndent("", "  ")
 				if err := enc.Encode(all); err != nil {
 					return err
 				}
-			} else {
+			default:
 				printSessions(all, scanned)
 			}
 
@@ -91,7 +105,28 @@ This command reports. It does not modify anything.`,
 
 	cmd.Flags().StringVar(&path, "path", "", "audit this directory instead of the default agent locations")
 	cmd.Flags().BoolVar(&asJSON, "json", false, "emit JSON instead of a table")
+	cmd.Flags().BoolVar(&stats, "stats", false,
+		"print counts only — no values, paths or fingerprints — so the result can be shared")
 	return cmd
+}
+
+// printStats renders the shareable summary. Everything it prints is a count.
+func printStats(st transcript.Stats) {
+	fmt.Printf("%d transcript(s) scanned\n", st.Transcripts)
+	fmt.Printf("%d contain at least one finding\n", st.WithFinding)
+	fmt.Printf("%d contain a credential\n", st.WithCredential)
+	fmt.Printf("%d contain Brazilian personal data\n", st.WithPersonalData)
+
+	if types := st.Types(); len(types) > 0 {
+		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+		_, _ = fmt.Fprintln(w, "\nTYPE\tTRANSCRIPTS\tDISTINCT VALUES")
+		for _, t := range types {
+			ts := st.ByType[t]
+			_, _ = fmt.Fprintf(w, "%s\t%d\t%d\n", t, ts.Transcripts, ts.Values)
+		}
+		_ = w.Flush()
+	}
+	fmt.Println("\nCounts only: no values, paths or fingerprints. Safe to share.")
 }
 
 func printSessions(sessions []transcript.Session, scanned int) {

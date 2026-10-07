@@ -79,6 +79,7 @@ d0dead6eceff137cafd15c0029bf1214  # AKIA...LE example key, cmd/vedei-hook/main_t
 2040ad664a71a504a6ff863b0b78a4f0  # generated PIS vector, space-separated, detect/br/extract_test.go
 62949e15935851bd24d617292e7230f8  # generated titulo vector, space-separated, detect/br/extract_test.go
 ec2a7642f9821664294f09e54573ca66  # generated CNS vector, detect/br/extract_test.go
+c3fca3e7a0151668ec85c974b0f4f57f  # the made-up credential from the corpus, also in transcript/stats_test.go
 3d916d891e1aab79bc68592c2d7cd3a5  # the first alphanumeric CNPJ the Receita issued; an earlier version of this file quoted it in a comment, so git history still holds it
 
 # --- the one path rule: the labeled corpus ---

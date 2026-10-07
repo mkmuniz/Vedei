@@ -109,3 +109,23 @@ vedei daemon status
 Pass `--idle-timeout 8h` if you would rather it exit when unused. Socket path
 resolution, in order: `VEDEI_SOCKET`, `$XDG_RUNTIME_DIR/vedei/sock`,
 `~/.vedei/sock`.
+
+**Windows: run without the daemon, for now.** The daemon builds on Windows but
+its access control does not: the `0600`/`0700` modes that keep the socket
+private on macOS and Linux are ignored there, since Windows uses ACLs, and the
+daemon is untested on it. Configure the hook as `vedei hook --no-daemon`. It
+costs about 29 ms per tool call instead of 8, and nothing crosses a socket.
+
+The plan to close it, in order:
+
+1. Create the socket's directory with an explicit security descriptor that
+   grants access to the current user's SID only, through
+   `golang.org/x/sys/windows`, already a transitive dependency — rather than
+   relying on the profile directory's default ACL.
+2. Assert it in a test that reads the descriptor back, the Windows counterpart
+   of `TestListen_SocketAndDirectoryArePrivate`.
+3. Run the daemon and hook test suites on a Windows CI runner, so "untested"
+   stops being true.
+
+A named pipe with the same descriptor is the alternative if Unix-domain sockets
+turn out to misbehave on older Windows builds.

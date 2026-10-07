@@ -108,3 +108,28 @@ func TestRewrite_EmptyInput(t *testing.T) {
 		t.Errorf("Rewrite(nil) = %q", got)
 	}
 }
+
+// Withhold is the fail-closed answer: the output is replaced by a notice that
+// says nothing about it, and the rest of the event — which the agent needs to
+// route the result — survives untouched.
+func TestWithhold(t *testing.T) {
+	in := []byte(`{"tool_name":"Read","tool_response":"cpf 529.982.247-25"}`)
+	out := hookevent.Withhold(in)
+
+	var ev map[string]any
+	if err := json.Unmarshal(out, &ev); err != nil {
+		t.Fatalf("the withheld event is not JSON: %v", err)
+	}
+	if ev["tool_response"] != hookevent.Withheld {
+		t.Errorf("tool_response = %v, want the withheld notice", ev["tool_response"])
+	}
+	if ev["tool_name"] != "Read" {
+		t.Errorf("tool_name was lost: %v", ev["tool_name"])
+	}
+
+	// An event with no recognizable output has nothing to withhold.
+	other := []byte(`{"other":"x"}`)
+	if got := hookevent.Withhold(other); string(got) != string(other) {
+		t.Errorf("an event without output was rewritten: %s", got)
+	}
+}

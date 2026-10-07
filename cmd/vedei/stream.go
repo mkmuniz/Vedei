@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/mkmuniz/vedei/detect"
+	"github.com/mkmuniz/vedei/internal/hookevent"
 )
 
 func newStreamCmd() *cobra.Command {
@@ -36,6 +37,13 @@ rule set; without one the work happens in-process.`,
 			}
 
 			res := redact(cmd.Context(), string(content), detect.Metadata{Source: "stdin"}, opts)
+			if res.Degraded && opts.failClosed {
+				// Nothing of the input is written: it could not be checked.
+				if _, err := fmt.Fprintln(os.Stdout, hookevent.Withheld); err != nil {
+					return err
+				}
+				return fmt.Errorf("detection failed, output withheld: %w", res.Err)
+			}
 			if _, err := os.Stdout.WriteString(res.Text); err != nil {
 				return err
 			}

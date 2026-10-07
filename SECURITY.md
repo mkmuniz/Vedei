@@ -102,6 +102,14 @@ tokens are detected by the upstream corpus.
   written to disk. `--idle-timeout` makes it exit when unused.
 - A request is capped at 16 MB, so one client cannot decide how much memory the
   process holds.
+- **None of the above holds on Windows.** vedei builds there, and Windows 10
+  1803+ supports Unix-domain sockets, but `os.Chmod` on Windows only toggles the
+  read-only attribute: the `0600` and `0700` modes restrict nobody, because
+  Windows controls access with ACLs. The socket's privacy then rests on the
+  default ACL of the user's profile directory — normally the user,
+  Administrators and SYSTEM — which vedei does not verify. It is also untested
+  on Windows. Until that changes, run `vedei hook` without the daemon on
+  Windows (see `hooks/README.md`).
 
 **Findings crossing the socket cannot carry the raw value.** `Finding.Raw` is
 `json:"-"`, so the process boundary enforces ADR-003 rather than trusting it.

@@ -99,6 +99,16 @@ O vedei reduz o que entra ali e mostra o que já entrou. Não substitui criptogr
 
 Documentado no próprio repositório do Claude Code: [#44868](https://github.com/anthropics/claude-code/issues/44868), [#50014](https://github.com/anthropics/claude-code/issues/50014), [#95680](https://github.com/anthropics/claude-code/issues/95680).
 
+
+**De quais agentes o transcript é lido.** `vedei transcript scan` e `scrub` cobrem Claude Code (`~/.claude/projects/`) e Codex (`~/.codex/sessions/`). Dois outros agentes guardam o mesmo tipo de registro e **ainda não** são lidos:
+
+| agente | onde guarda as sessões | por que ainda não |
+|---|---|---|
+| Gemini CLI | `~/.gemini/tmp/<hash do projeto>/chats/`, arquivos JSON | o formato está documentado, mas não foi testado contra sessões reais; ler às cegas reportaria uma cobertura que não existe |
+| Cursor | `state.vscdb`, um banco SQLite no diretório de usuário do Cursor | ler exige um driver SQLite, e o `scrub` não reescreve um banco com segurança |
+
+Os dois também ficam em texto puro no disco. Até serem suportados, trate esses diretórios como contendo tudo que os agentes leram.
+
 ## O que "validar" significa aqui
 
 | | Segredo | Dado pessoal |

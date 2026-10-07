@@ -141,8 +141,27 @@ func TestHookClient_FallsBackToTheFullBinary(t *testing.T) {
 
 	out := runHook(t, hook, event("cpf "+testCPF),
 		"--socket", shortSocket(t), "--fallback", vedei)
-	if strings.Contains(out, testCPF) {
-		t.Fatalf("the fallback did not redact: %s", out)
+	assertRedactedEvent(t, out)
+}
+
+// assertRedactedEvent checks that out is the event, with its output redacted.
+//
+// "The value is gone" is not enough on its own. --fallback once ran vedei with
+// no arguments, so the output was vedei's help text: no CPF in it, and a test
+// that only looked for the CPF passed while the agent received a usage screen
+// instead of its tool's result.
+func assertRedactedEvent(t *testing.T, out string) {
+	t.Helper()
+	var ev map[string]any
+	if err := json.Unmarshal([]byte(out), &ev); err != nil {
+		t.Fatalf("the output is not the event: %v\n%s", err, out)
+	}
+	resp, _ := ev["tool_response"].(string)
+	if strings.Contains(resp, testCPF) {
+		t.Fatalf("the value got through: %s", resp)
+	}
+	if !strings.Contains(resp, "vedei: cpf redacted") {
+		t.Errorf("tool_response = %q, want the value redacted", resp)
 	}
 }
 
@@ -156,6 +175,32 @@ func TestHookClient_PassesThroughWithNothingAvailable(t *testing.T) {
 	if out != in {
 		t.Errorf("the event was altered with no engine available:\n got %s\nwant %s", out, in)
 	}
+}
+
+// No daemon and no fallback is the case --fail-closed exists for: nothing can
+// scan the output, so it is withheld instead of passed on.
+func TestHookClient_FailClosedWithholdsWithNothingAvailable(t *testing.T) {
+	_, hook := bins(t)
+
+	out := runHook(t, hook, event("cpf "+testCPF),
+		"--socket", shortSocket(t), "--fallback", "-", "--fail-closed")
+	if strings.Contains(out, testCPF) {
+		t.Fatalf("the unscanned value got through: %s", out)
+	}
+	if !strings.Contains(out, "output withheld") {
+		t.Errorf("no withheld notice: %s", out)
+	}
+}
+
+// The flag is passed on to the full binary when the client falls back to it,
+// so a fallback that cannot scan withholds too. Here the fallback works, and
+// the value is redacted rather than withheld.
+func TestHookClient_FailClosedFallbackStillRedacts(t *testing.T) {
+	vedei, hook := bins(t)
+
+	out := runHook(t, hook, event("cpf "+testCPF),
+		"--socket", shortSocket(t), "--fallback", vedei, "--fail-closed")
+	assertRedactedEvent(t, out)
 }
 
 func TestHookClient_FailsOpenOnMalformedInput(t *testing.T) {
